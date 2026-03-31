@@ -1,38 +1,35 @@
 // src/pages/MenuPage.jsx
-// Vista principal del comensal. Muestra categorías y productos filtrados.
-
 import { useState } from 'react';
 import useMenu from '../hooks/useMenu';
 import useCartStore from '../store/useCartStore';
 import ProductCard from '../components/ProductCard';
+import CartDrawer from '../components/CartDrawer'; // 👈 nuevo
 
 const MenuPage = () => {
   const { categorias, productos, cargando, error } = useMenu();
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
+  const [carritoAbierto, setCarritoAbierto] = useState(false); // 👈 nuevo
   const totalItems = useCartStore((s) => s.totalItems());
 
-  // Filtra productos según la categoría seleccionada
   const productosFiltrados =
     categoriaActiva === 'Todos'
       ? productos
-      : productos.filter(
-          (p) => p.categorias?.nombre === categoriaActiva
-        );
+      : productos.filter((p) => p.categorias?.nombre === categoriaActiva);
 
   if (cargando) return <p style={styles.mensaje}>Cargando menú...</p>;
   if (error)    return <p style={styles.mensaje}>Error: {error}</p>;
 
   return (
     <div style={styles.pagina}>
-      {/* Header */}
       <header style={styles.header}>
         <h1 style={styles.titulo}>🍽 Mr. Arroz Paisa</h1>
-        <div style={styles.carrito}>
+
+        {/* 👈 El ícono del carrito ahora abre el drawer */}
+        <div style={styles.carrito} onClick={() => setCarritoAbierto(true)}>
           🛒 <span>{totalItems}</span>
         </div>
       </header>
 
-      {/* Filtros de categoría */}
       <div style={styles.filtros}>
         {['Todos', ...categorias.map((c) => c.nombre)].map((cat) => (
           <button
@@ -48,12 +45,17 @@ const MenuPage = () => {
         ))}
       </div>
 
-      {/* Grid de productos */}
       <div style={styles.grid}>
         {productosFiltrados.map((producto) => (
           <ProductCard key={producto.id_producto} producto={producto} />
         ))}
       </div>
+
+      {/* 👈 El drawer se monta aquí */}
+      <CartDrawer
+        abierto={carritoAbierto}
+        onCerrar={() => setCarritoAbierto(false)}
+      />
     </div>
   );
 };
@@ -65,14 +67,9 @@ const styles = {
   carrito: { fontSize: '20px', fontWeight: '700', cursor: 'pointer' },
   filtros: { display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px' },
   filtroBtn: {
-    padding: '8px 16px',
-    borderRadius: '20px',
-    border: '2px solid #2e7d32',
-    backgroundColor: '#fff',
-    color: '#2e7d32',
-    cursor: 'pointer',
-    fontWeight: '600',
-    whiteSpace: 'nowrap',
+    padding: '8px 16px', borderRadius: '20px',
+    border: '2px solid #2e7d32', backgroundColor: '#fff',
+    color: '#2e7d32', cursor: 'pointer', fontWeight: '600', whiteSpace: 'nowrap',
   },
   filtroActivo: { backgroundColor: '#2e7d32', color: '#fff' },
   grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },

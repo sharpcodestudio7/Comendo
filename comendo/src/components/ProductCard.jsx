@@ -46,7 +46,7 @@ const ProductCard = ({ producto }) => {
         ) : (
           // Si ya está, muestra los controles de cantidad
           <div style={styles.contador}>
-            <button style={styles.btnContador} onClick={() => quitarItem(producto.id)}>−</button>
+            <button style={styles.btnContador} onClick={() => quitarItem(producto.id_producto)}>−</button>
             <span style={styles.cantidad}>{cantidad}</span>
             <button style={styles.btnContador} onClick={() => agregarItem(producto)}>+</button>
           </div>
