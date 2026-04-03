@@ -1,14 +1,18 @@
 // src/pages/MenuPage.jsx
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import useMenu from '../hooks/useMenu';
 import useCartStore from '../store/useCartStore';
 import ProductCard from '../components/ProductCard';
-import CartDrawer from '../components/CartDrawer'; // 👈 nuevo
+import CartDrawer from '../components/CartDrawer';
 
 const MenuPage = () => {
+  // ✅ useParams DENTRO del componente, junto a los demás hooks
+  const { mesaId } = useParams();
+
   const { categorias, productos, cargando, error } = useMenu();
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
-  const [carritoAbierto, setCarritoAbierto] = useState(false); // 👈 nuevo
+  const [carritoAbierto, setCarritoAbierto] = useState(false);
   const totalItems = useCartStore((s) => s.totalItems());
 
   const productosFiltrados =
@@ -23,8 +27,7 @@ const MenuPage = () => {
     <div style={styles.pagina}>
       <header style={styles.header}>
         <h1 style={styles.titulo}>🍽 Mr. Arroz Paisa</h1>
-
-        {/* 👈 El ícono del carrito ahora abre el drawer */}
+   
         <div style={styles.carrito} onClick={() => setCarritoAbierto(true)}>
           🛒 <span>{totalItems}</span>
         </div>
@@ -51,10 +54,11 @@ const MenuPage = () => {
         ))}
       </div>
 
-      {/* 👈 El drawer se monta aquí */}
+      {/* ✅ mesaId ya fluye hacia el CartDrawer */}
       <CartDrawer
         abierto={carritoAbierto}
         onCerrar={() => setCarritoAbierto(false)}
+        mesaId={mesaId}
       />
     </div>
   );
