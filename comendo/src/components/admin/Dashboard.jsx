@@ -1,12 +1,11 @@
 // src/components/admin/Dashboard.jsx
-// Dashboard analítico del panel admin.
-// Muestra métricas de ventas, productos más vendidos e inventario crítico.
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
+import { exportarVentas } from '../../api/exportService';
 
 const Dashboard = () => {
   const [metricas, setMetricas] = useState(null);
+  const [pedidosCompletos, setPedidosCompletos] = useState([]);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -29,10 +28,7 @@ const Dashboard = () => {
     // ── 2. Productos más vendidos ─────────────────────────────────────────
     const { data: detalles } = await supabase
       .from('detalle_pedidos')
-      .select(`
-        cantidad,
-        productos ( nombre )
-      `);
+      .select('cantidad, productos ( nombre )');
 
     const ventasPorProducto = {};
     detalles?.forEach(({ cantidad, productos }) => {
@@ -47,7 +43,7 @@ const Dashboard = () => {
       .sort((a, b) => b.cantidad - a.cantidad)
       .slice(0, 5);
 
-    // ── 3. Inventario crítico (stock bajo) ────────────────────────────────
+    // ── 3. Inventario crítico ─────────────────────────────────────────────
     const { data: insumos } = await supabase
       .from('insumos')
       .select('nombre, cantidad_stock, unidad_medida')
@@ -59,39 +55,56 @@ const Dashboard = () => {
       .from('pedidos')
       .select('estado_actual');
 
-    const pedidosPorEstado = {
-      Recibido: 0, Preparando: 0, Listo: 0, Entregado: 0,
-    };
+    const pedidosPorEstado = { Recibido: 0, Preparando: 0, Listo: 0, Entregado: 0 };
     todosPedidos?.forEach(({ estado_actual }) => {
       if (pedidosPorEstado[estado_actual] !== undefined) {
         pedidosPorEstado[estado_actual]++;
       }
     });
 
-    setMetricas({
-      totalVentas,
-      totalPedidos,
-      ticketPromedio,
-      productosRanking,
-      insumos: insumos || [],
-      pedidosPorEstado,
-    });
+    // ── 5. Pedidos completos para exportar ────────────────────────────────
+    const { data: pedidosExport } = await supabase
+      .from('pedidos')
+      .select(`
+        id_pedido,
+        total,
+        estado_actual,
+        fecha_creacion,
+        mesas ( numero ),
+        detalle_pedidos (
+          cantidad,
+          precio_unitario,
+          subtotal,
+          productos ( nombre )
+        )
+      `)
+      .order('fecha_creacion', { ascending: false });
 
+    setPedidosCompletos(pedidosExport || []);
+    setMetricas({ totalVentas, totalPedidos, ticketPromedio, productosRanking, insumos: insumos || [], pedidosPorEstado });
     setCargando(false);
   };
 
   const formatCOP = (valor) =>
-    new Intl.NumberFormat('es-CO', {
-      style: 'currency', currency: 'COP', minimumFractionDigits: 0,
-    }).format(valor);
+    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor);
 
   if (cargando) return <p style={{ color: '#fff' }}>Cargando métricas...</p>;
 
   return (
     <div style={styles.pagina}>
-      <h2 style={styles.titulo}>📊 Dashboard</h2>
 
-      {/* ── KPIs principales ── */}
+      {/* Header con botón exportar */}
+      <div style={styles.header}>
+        <h2 style={styles.titulo}>📊 Dashboard</h2>
+        <button
+          style={styles.btnExportar}
+          onClick={() => exportarVentas(pedidosCompletos)}
+        >
+          ⬇ Exportar Ventas Excel
+        </button>
+      </div>
+
+      {/* KPIs */}
       <div style={styles.kpiGrid}>
         <div style={styles.kpiCard}>
           <span style={styles.kpiLabel}>Total Ventas</span>
@@ -117,7 +130,7 @@ const Dashboard = () => {
 
       <div style={styles.seccionGrid}>
 
-        {/* ── Productos más vendidos ── */}
+        {/* Productos más vendidos */}
         <div style={styles.seccion}>
           <h3 style={styles.seccionTitulo}>🏆 Productos Más Vendidos</h3>
           {metricas.productosRanking.length === 0 ? (
@@ -129,12 +142,9 @@ const Dashboard = () => {
               return (
                 <div key={p.nombre} style={styles.rankingItem}>
                   <div style={styles.rankingHeader}>
-                    <span style={styles.rankingNombre}>
-                      {i + 1}. {p.nombre}
-                    </span>
+                    <span style={styles.rankingNombre}>{i + 1}. {p.nombre}</span>
                     <span style={styles.rankingCantidad}>{p.cantidad} uds</span>
                   </div>
-                  {/* Barra de progreso */}
                   <div style={styles.barraFondo}>
                     <div style={{
                       ...styles.barraRelleno,
@@ -148,7 +158,7 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* ── Inventario crítico ── */}
+        {/* Inventario crítico */}
         <div style={styles.seccion}>
           <h3 style={styles.seccionTitulo}>⚠️ Inventario — Stock más bajo</h3>
           {metricas.insumos.length === 0 ? (
@@ -162,12 +172,8 @@ const Dashboard = () => {
                   borderLeft: `4px solid ${stockBajo ? '#E53935' : '#2D6A4F'}`,
                 }}>
                   <span style={styles.insumoNombre}>{insumo.nombre}</span>
-                  <span style={{
-                    ...styles.insumoStock,
-                    color: stockBajo ? '#E53935' : '#4CAF50',
-                  }}>
-                    {insumo.cantidad_stock} {insumo.unidad_medida}
-                    {stockBajo && ' ⚠️'}
+                  <span style={{ ...styles.insumoStock, color: stockBajo ? '#E53935' : '#4CAF50' }}>
+                    {insumo.cantidad_stock} {insumo.unidad_medida}{stockBajo && ' ⚠️'}
                   </span>
                 </div>
               );
@@ -175,21 +181,14 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* ── Pedidos por estado ── */}
+        {/* Pedidos por estado */}
         <div style={styles.seccion}>
           <h3 style={styles.seccionTitulo}>📋 Pedidos por Estado</h3>
           {Object.entries(metricas.pedidosPorEstado).map(([estado, cantidad]) => {
-            const colores = {
-              Recibido: '#E53935',
-              Preparando: '#F57C00',
-              Listo: '#2D6A4F',
-              Entregado: '#1565C0',
-            };
+            const colores = { Recibido: '#E53935', Preparando: '#F57C00', Listo: '#2D6A4F', Entregado: '#1565C0' };
             return (
               <div key={estado} style={styles.estadoItem}>
-                <span style={{ ...styles.estadoBadge, backgroundColor: colores[estado] }}>
-                  {estado}
-                </span>
+                <span style={{ ...styles.estadoBadge, backgroundColor: colores[estado] }}>{estado}</span>
                 <span style={styles.estadoCantidad}>{cantidad} pedidos</span>
               </div>
             );
@@ -203,7 +202,9 @@ const Dashboard = () => {
 
 const styles = {
   pagina: { color: '#fff', fontFamily: 'Arial, sans-serif' },
-  titulo: { margin: '0 0 24px', fontSize: '22px' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
+  titulo: { margin: 0, fontSize: '22px' },
+  btnExportar: { padding: '10px 20px', backgroundColor: '#1565C0', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' },
   kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' },
   kpiCard: { backgroundColor: '#16213e', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '3px solid #2D6A4F' },
   kpiLabel: { color: '#888', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' },
