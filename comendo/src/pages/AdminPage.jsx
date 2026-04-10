@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../api/supabase';
+import Dashboard from '../components/admin/Dashboard';
 import ProductosCRUD from '../components/admin/ProductosCRUD';
 
 const AdminPage = () => {
@@ -47,15 +48,10 @@ const AdminPage = () => {
         </button>
       </div>
 
-      {/* Contenido principal */}
+      {/* ✅ Contenedor del contenido principal */}
       <div style={styles.contenido}>
         {seccionActiva === 'productos' && <ProductosCRUD />}
-        {seccionActiva === 'dashboard' && (
-          <div style={styles.proximamente}>
-            <h2>📊 Dashboard</h2>
-            <p>Próximamente — métricas y reportes</p>
-          </div>
-        )}
+        {seccionActiva === 'dashboard' && <Dashboard />}
       </div>
 
     </div>
@@ -72,7 +68,6 @@ const styles = {
   navBtnActivo: { backgroundColor: '#2D6A4F', color: '#fff' },
   btnLogout: { padding: '12px 16px', backgroundColor: 'transparent', border: '1px solid #E53935', color: '#E53935', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' },
   contenido: { flex: 1, padding: '32px', overflowY: 'auto' },
-  proximamente: { color: '#fff', textAlign: 'center', marginTop: '80px' },
 };
 
 export default AdminPage;
