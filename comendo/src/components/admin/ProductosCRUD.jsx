@@ -11,27 +11,28 @@ const ProductosCRUD = () => {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
-  // Formulario vacío por defecto
   const formVacio = { nombre: '', descripcion: '', precio: '', id_categoria: '', disponible: true };
   const [form, setForm] = useState(formVacio);
 
-  // ── Carga inicial ────────────────────────────────────────────────────────
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
   const cargarDatos = async () => {
     setCargando(true);
-    const [{ data: prods }, { data: cats }] = await Promise.all([
+    const [{ data: prods, error: errorProds }, { data: cats }] = await Promise.all([
       supabase.from('productos').select('*, categorias(nombre)').order('nombre'),
       supabase.from('categorias').select('*').order('nombre'),
     ]);
+
+    console.log('Productos:', prods);
+    console.log('Error:', errorProds);
+
     setProductos(prods || []);
     setCategorias(cats || []);
     setCargando(false);
   };
 
-  // ── Abrir modal para crear ───────────────────────────────────────────────
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
   const abrirCrear = () => {
     setProductoEditando(null);
     setForm(formVacio);
@@ -39,7 +40,6 @@ const ProductosCRUD = () => {
     setModalAbierto(true);
   };
 
-  // ── Abrir modal para editar ──────────────────────────────────────────────
   const abrirEditar = (producto) => {
     setProductoEditando(producto);
     setForm({
@@ -53,7 +53,6 @@ const ProductosCRUD = () => {
     setModalAbierto(true);
   };
 
-  // ── Guardar (crear o editar) ─────────────────────────────────────────────
   const handleGuardar = async () => {
     if (!form.nombre || !form.precio || !form.id_categoria) {
       setError('Nombre, precio y categoría son obligatorios.');
@@ -62,7 +61,6 @@ const ProductosCRUD = () => {
     try {
       setGuardando(true);
       setError(null);
-
       const payload = {
         nombre: form.nombre,
         descripcion: form.descripcion,
@@ -70,18 +68,13 @@ const ProductosCRUD = () => {
         id_categoria: form.id_categoria,
         disponible: form.disponible,
       };
-
       if (productoEditando) {
-        // Editar producto existente
         await supabase.from('productos').update(payload).eq('id_producto', productoEditando.id_producto);
       } else {
-        // Crear producto nuevo
         await supabase.from('productos').insert(payload);
       }
-
       await cargarDatos();
       setModalAbierto(false);
-
     } catch (err) {
       setError('Error al guardar. Intenta de nuevo.');
     } finally {
@@ -89,14 +82,12 @@ const ProductosCRUD = () => {
     }
   };
 
-  // ── Eliminar producto ────────────────────────────────────────────────────
   const handleEliminar = async (productoId) => {
     if (!window.confirm('¿Estás seguro de eliminar este producto?')) return;
     await supabase.from('productos').delete().eq('id_producto', productoId);
     await cargarDatos();
   };
 
-  // ── Togglear disponibilidad ──────────────────────────────────────────────
   const toggleDisponible = async (producto) => {
     await supabase
       .from('productos')
@@ -108,44 +99,44 @@ const ProductosCRUD = () => {
   const formatCOP = (valor) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor);
 
+  // ── Debug temporal ───────────────────────────────────────────────────────
+  console.log('Estado cargando:', cargando, '| Productos:', productos.length);
+
   if (cargando) return <p style={{ color: '#fff' }}>Cargando productos...</p>;
 
   return (
     <div>
-      {/* Header */}
       <div style={styles.header}>
         <h2 style={styles.titulo}>🍛 Gestión de Productos</h2>
         <button style={styles.btnCrear} onClick={abrirCrear}>+ Nuevo Producto</button>
       </div>
 
-      {/* Tabla de productos */}
       <div style={styles.tabla}>
-        {productos.map((producto) => (
-          <div key={producto.id_producto} style={styles.fila}>
-            <div style={styles.filaInfo}>
-              <span style={styles.nombre}>{producto.nombre}</span>
-              <span style={styles.categoria}>{producto.categorias?.nombre}</span>
-              <span style={styles.precio}>{formatCOP(producto.precio)}</span>
+        {productos.length === 0 ? (
+          <p style={{ color: '#888' }}>No hay productos registrados.</p>
+        ) : (
+          productos.map((producto) => (
+            <div key={producto.id_producto} style={styles.fila}>
+              <div style={styles.filaInfo}>
+                <span style={styles.nombre}>{producto.nombre}</span>
+                <span style={styles.categoria}>{producto.categorias?.nombre}</span>
+                <span style={styles.precio}>{formatCOP(producto.precio)}</span>
+              </div>
+              <div style={styles.filaAcciones}>
+                <button
+                  style={{ ...styles.btnToggle, backgroundColor: producto.disponible ? '#2D6A4F' : '#555' }}
+                  onClick={() => toggleDisponible(producto)}
+                >
+                  {producto.disponible ? '✅ Disponible' : '❌ Oculto'}
+                </button>
+                <button style={styles.btnEditar} onClick={() => abrirEditar(producto)}>✏️ Editar</button>
+                <button style={styles.btnEliminar} onClick={() => handleEliminar(producto.id_producto)}>🗑 Eliminar</button>
+              </div>
             </div>
-            <div style={styles.filaAcciones}>
-              {/* Toggle disponible */}
-              <button
-                style={{
-                  ...styles.btnToggle,
-                  backgroundColor: producto.disponible ? '#2D6A4F' : '#555',
-                }}
-                onClick={() => toggleDisponible(producto)}
-              >
-                {producto.disponible ? '✅ Disponible' : '❌ Oculto'}
-              </button>
-              <button style={styles.btnEditar} onClick={() => abrirEditar(producto)}>✏️ Editar</button>
-              <button style={styles.btnEliminar} onClick={() => handleEliminar(producto.id_producto)}>🗑 Eliminar</button>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
-      {/* Modal crear/editar */}
       {modalAbierto && (
         <>
           <div style={styles.overlay} onClick={() => setModalAbierto(false)} />
@@ -153,7 +144,6 @@ const ProductosCRUD = () => {
             <h3 style={styles.modalTitulo}>
               {productoEditando ? '✏️ Editar Producto' : '+ Nuevo Producto'}
             </h3>
-
             <div style={styles.campos}>
               <input
                 style={styles.input}
@@ -186,7 +176,6 @@ const ProductosCRUD = () => {
                   </option>
                 ))}
               </select>
-
               <label style={styles.checkLabel}>
                 <input
                   type="checkbox"
@@ -196,13 +185,9 @@ const ProductosCRUD = () => {
                 <span style={{ color: '#ccc', marginLeft: '8px' }}>Disponible en el menú</span>
               </label>
             </div>
-
             {error && <p style={styles.error}>{error}</p>}
-
             <div style={styles.modalBotones}>
-              <button style={styles.btnCancelar} onClick={() => setModalAbierto(false)}>
-                Cancelar
-              </button>
+              <button style={styles.btnCancelar} onClick={() => setModalAbierto(false)}>Cancelar</button>
               <button
                 style={{ ...styles.btnGuardar, opacity: guardando ? 0.7 : 1 }}
                 onClick={handleGuardar}
