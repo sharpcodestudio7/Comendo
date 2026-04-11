@@ -1,6 +1,7 @@
 // src/components/admin/ProductosCRUD.jsx
 import { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
+import { exportarProductos } from '../../api/exportService';
 
 const ProductosCRUD = () => {
   const [productos, setProductos] = useState([]);
@@ -107,9 +108,19 @@ const ProductosCRUD = () => {
   return (
     <div>
       <div style={styles.header}>
-        <h2 style={styles.titulo}>🍛 Gestión de Productos</h2>
-        <button style={styles.btnCrear} onClick={abrirCrear}>+ Nuevo Producto</button>
-      </div>
+  <h2 style={styles.titulo}>🍛 Gestión de Productos</h2>
+  <div style={{ display: 'flex', gap: '10px' }}>
+    <button
+      style={styles.btnExportar}
+      onClick={() => exportarProductos(productos)}
+    >
+      ⬇ Exportar Excel
+    </button>
+    <button style={styles.btnCrear} onClick={abrirCrear}>
+      + Nuevo Producto
+    </button>
+  </div>
+</div>
 
       <div style={styles.tabla}>
         {productos.length === 0 ? (
@@ -227,6 +238,7 @@ const styles = {
   modalBotones: { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
   btnCancelar: { padding: '10px 20px', backgroundColor: 'transparent', border: '1px solid #555', color: '#ccc', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
   btnGuardar: { padding: '10px 20px', backgroundColor: '#2D6A4F', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' },
+  btnExportar: { padding: '10px 20px', backgroundColor: '#1565C0', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' },
 };
 
 export default ProductosCRUD;
