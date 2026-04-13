@@ -1,9 +1,9 @@
-// src/components/ProtectedRoute.jsx
+// src/components/ProtectedKDS.jsx
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '../api/supabase';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedKDS = ({ children }) => {
   const [sesion, setSesion] = useState(undefined);
   const [rol, setRol] = useState(null);
 
@@ -16,6 +16,7 @@ const ProtectedRoute = ({ children }) => {
         return;
       }
 
+      // Consulta el rol del usuario
       const { data: usuario } = await supabase
         .from('usuarios')
         .select('rol')
@@ -49,9 +50,9 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (!sesion) return <Navigate to="/login" replace />;
-  if (rol !== 'Administrador') return <Navigate to="/login" replace />;
+  if (rol !== 'Operario_Cocina') return <Navigate to="/login" replace />;
 
   return children;
 };
 
-export default ProtectedRoute;
+export default ProtectedKDS;
