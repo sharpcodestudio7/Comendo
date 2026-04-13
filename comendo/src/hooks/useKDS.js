@@ -1,21 +1,18 @@
 // src/hooks/useKDS.js
-// Hook personalizado que maneja toda la lógica del KDS:
-// 1. Carga inicial de pedidos activos desde Supabase
-// 2. Suscripción Realtime para recibir nuevos pedidos automáticamente
-// 3. Función para cambiar el estado de un pedido
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../api/supabase';
 
-// Estados que le interesan a la cocina — en este orden de flujo
 const ESTADOS_KDS = ['Recibido', 'Preparando', 'Listo'];
+
+// Minutos que un pedido "Listo" permanece visible en el KDS antes de archivarse
+const MINUTOS_VISIBLE_LISTO = 2;
 
 const useKDS = () => {
   const [pedidos, setPedidos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
-  // ── PASO 1: Carga inicial de pedidos activos ────────────────────────────
+  // ── Carga inicial ─────────────────────────────────────────────────────
   const cargarPedidos = async () => {
     const { data, error } = await supabase
       .from('pedidos')
@@ -29,9 +26,8 @@ const useKDS = () => {
           productos ( nombre )
         )
       `)
-      // Solo traemos pedidos que la cocina todavía debe atender
       .in('estado_actual', ESTADOS_KDS)
-      .order('fecha_creacion', { ascending: true }); // FIFO: primero el más antiguo
+      .order('fecha_creacion', { ascending: true });
 
     if (error) {
       setError(error.message);
@@ -45,7 +41,7 @@ const useKDS = () => {
     cargarPedidos();
   }, []);
 
-  // ── PASO 2: Suscripción Realtime ────────────────────────────────────────
+  // ── Realtime ──────────────────────────────────────────────────────────
   useEffect(() => {
     const canal = supabase
       .channel('kds-pedidos')
@@ -54,15 +50,11 @@ const useKDS = () => {
         { event: '*', schema: 'public', table: 'pedidos' },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            // Nuevo pedido: lo recargamos completo para tener el join con detalle
             cargarPedidos();
           }
-
           if (payload.eventType === 'UPDATE') {
             const estadoNuevo = payload.new.estado_actual;
-
             if (ESTADOS_KDS.includes(estadoNuevo)) {
-              // Actualizamos solo el estado del pedido que cambió
               setPedidos((prev) =>
                 prev.map((p) =>
                   p.id_pedido === payload.new.id_pedido
@@ -71,8 +63,6 @@ const useKDS = () => {
                 )
               );
             } else {
-              // Si el estado ya no le interesa a cocina (ej: Entregado, Pagado)
-              // lo removemos del tablero
               setPedidos((prev) =>
                 prev.filter((p) => p.id_pedido !== payload.new.id_pedido)
               );
@@ -85,7 +75,38 @@ const useKDS = () => {
     return () => supabase.removeChannel(canal);
   }, []);
 
-  // ── PASO 3: Cambiar estado de un pedido ────────────────────────────────
+  // ── Auto-limpieza de pedidos Listos ───────────────────────────────────
+  // Cada 30 segundos revisa si hay pedidos "Listo" que llevan más de
+  // MINUTOS_VISIBLE_LISTO minutos y los cambia a "Entregado" automáticamente
+  useEffect(() => {
+    const intervalo = setInterval(async () => {
+      const ahora = new Date();
+
+      const pedidosAArchivar = pedidos.filter((p) => {
+        if (p.estado_actual !== 'Listo') return false;
+        const minutosEnListo = (ahora - new Date(p.fecha_creacion)) / 60000;
+        return minutosEnListo >= MINUTOS_VISIBLE_LISTO;
+      });
+
+      for (const pedido of pedidosAArchivar) {
+        await supabase
+          .from('pedidos')
+          .update({ estado_actual: 'Entregado' })
+          .eq('id_pedido', pedido.id_pedido);
+      }
+
+      // Si archivamos alguno, los quitamos del estado local
+      if (pedidosAArchivar.length > 0) {
+        setPedidos((prev) =>
+          prev.filter((p) => !pedidosAArchivar.find((a) => a.id_pedido === p.id_pedido))
+        );
+      }
+    }, 30000); // Revisa cada 30 segundos
+
+    return () => clearInterval(intervalo);
+  }, [pedidos]);
+
+  // ── Cambiar estado manualmente ────────────────────────────────────────
   const cambiarEstado = async (pedidoId, nuevoEstado) => {
     const { error } = await supabase
       .from('pedidos')
@@ -95,8 +116,6 @@ const useKDS = () => {
     if (error) {
       console.error('Error al cambiar estado:', error.message);
     }
-    // No necesitamos actualizar el estado local manualmente:
-    // el canal Realtime de arriba lo hace automáticamente
   };
 
   return { pedidos, cargando, error, cambiarEstado, ESTADOS_KDS };

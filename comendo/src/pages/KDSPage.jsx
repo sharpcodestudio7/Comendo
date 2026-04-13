@@ -1,4 +1,6 @@
 // src/pages/KDSPage.jsx
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../api/supabase';
 import useKDS from '../hooks/useKDS';
 
 const COLUMNAS = [
@@ -82,18 +84,32 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
 };
 
 const KDSPage = () => {
+  const navigate = useNavigate();
   const { pedidos, cargando, error, cambiarEstado } = useKDS();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/cocina-login');
+  };
 
   if (cargando) return <p style={styles.mensaje}>Cargando pedidos...</p>;
   if (error) return <p style={styles.mensaje}>Error: {error}</p>;
 
   return (
     <div style={styles.pagina}>
+
+      {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.titulo}>🍽 Comendo — Cocina</h1>
-        <span style={styles.onlineIndicator}>● EN LÍNEA</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <span style={styles.onlineIndicator}>● EN LÍNEA</span>
+          <button onClick={handleLogout} style={styles.btnLogout}>
+            🚪 Salir
+          </button>
+        </div>
       </div>
 
+      {/* Tablero Kanban */}
       <div style={styles.tablero}>
         {COLUMNAS.map((columna) => {
           const pedidosColumna = pedidos.filter(
@@ -127,6 +143,7 @@ const KDSPage = () => {
           );
         })}
       </div>
+
     </div>
   );
 };
@@ -137,6 +154,7 @@ const styles = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', backgroundColor: '#16213e', borderBottom: '2px solid #2D6A4F' },
   titulo: { margin: 0, color: '#fff', fontSize: '22px' },
   onlineIndicator: { color: '#4CAF50', fontWeight: '700', fontSize: '14px' },
+  btnLogout: { padding: '8px 16px', backgroundColor: 'transparent', border: '1px solid #E53935', color: '#E53935', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' },
   tablero: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', padding: '20px', flex: 1 },
   columna: { backgroundColor: '#16213e', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column' },
   columnaHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', color: '#fff', fontWeight: '700', fontSize: '15px' },

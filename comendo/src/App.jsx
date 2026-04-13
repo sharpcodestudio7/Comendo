@@ -6,6 +6,7 @@ import KDSPage from './pages/KDSPage';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedKDS from './components/ProtectedKDS';
 
 function App() {
   return (
@@ -17,7 +18,11 @@ function App() {
         <Route path="/pedido/:pedidoId" element={<OrderTrackingPage />} />
 
         {/* Módulo 2 — Cocina */}
-        <Route path="/cocina" element={<KDSPage />} />
+        <Route path="/cocina" element={
+          <ProtectedKDS>
+            <KDSPage />
+          </ProtectedKDS>
+        } />
 
         {/* Módulo 3 — Admin */}
         <Route path="/login" element={<LoginPage />} />
