@@ -26,6 +26,14 @@ export const crearPedido = async (mesaId, items) => {
 
   if (errorPedido) throw new Error(`Error al crear pedido: ${errorPedido.message}`);
 
+  // ✅ Actualiza el estado de la mesa a Ocupada
+  if (mesaId) {
+    await supabase
+      .from('mesas')
+      .update({ estado: 'Ocupada' })
+      .eq('id_mesa', mesaId);
+  }
+
   // ── PASO 3: Insertar detalle del pedido ───────────────────────────────
   const detalle = items.map((i) => ({
     id_pedido: pedido.id_pedido,
@@ -42,7 +50,6 @@ export const crearPedido = async (mesaId, items) => {
   if (errorDetalle) throw new Error(`Error al guardar detalle: ${errorDetalle.message}`);
 
   // ── PASO 4: Descontar inventario según recetas (RF-3.1) ───────────────
-  // Para cada item del carrito buscamos su receta y descontamos los insumos
   for (const item of items) {
     const { data: recetas } = await supabase
       .from('recetas')
@@ -52,10 +59,8 @@ export const crearPedido = async (mesaId, items) => {
     if (!recetas || recetas.length === 0) continue;
 
     for (const receta of recetas) {
-      // Cantidad total a descontar = cantidad_requerida × unidades pedidas
       const cantidadADescontar = receta.cantidad_requerida * item.cantidad;
 
-      // Obtenemos el stock actual del insumo
       const { data: insumo } = await supabase
         .from('insumos')
         .select('cantidad_stock')
@@ -64,10 +69,8 @@ export const crearPedido = async (mesaId, items) => {
 
       if (!insumo) continue;
 
-      // Calculamos el nuevo stock — nunca baja de 0
       const nuevoStock = Math.max(0, insumo.cantidad_stock - cantidadADescontar);
 
-      // Actualizamos el stock en la base de datos
       await supabase
         .from('insumos')
         .update({ cantidad_stock: nuevoStock })

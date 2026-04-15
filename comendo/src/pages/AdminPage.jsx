@@ -7,6 +7,7 @@ import ProductosCRUD from '../components/admin/ProductosCRUD';
 import InsumosCRUD from '../components/admin/InsumosCRUD';
 import RecetasCRUD from '../components/admin/RecetasCRUD';
 import MesasQR from '../components/admin/MesasQR';
+import MonitorMesas from '../components/admin/MonitorMesas';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -26,6 +27,13 @@ const AdminPage = () => {
         <p style={styles.logoSub}>Panel Admin</p>
 
         <nav style={styles.nav}>
+
+          <button
+          style={{ ...styles.navBtn, ...(seccionActiva === 'monitor' ? styles.navBtnActivo : {}) }}
+          onClick={() => setSeccionActiva('monitor')}
+        >
+          🗺 Monitor Mesas
+        </button>
           <button
             style={{ ...styles.navBtn, ...(seccionActiva === 'productos' ? styles.navBtnActivo : {}) }}
             onClick={() => setSeccionActiva('productos')}
@@ -66,6 +74,7 @@ const AdminPage = () => {
       {/* Contenido principal */}
       <div style={styles.contenido}>
         {seccionActiva === 'productos' && <ProductosCRUD />}
+        {seccionActiva === 'monitor' && <MonitorMesas />}
         {seccionActiva === 'dashboard' && <Dashboard />}
         {seccionActiva === 'inventario' && <InsumosCRUD />}
         {seccionActiva === 'recetas' && <RecetasCRUD />}
