@@ -1,11 +1,12 @@
 // src/pages/AdminPage.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import InsumosCRUD from '../components/admin/InsumosCRUD';
 import { supabase } from '../api/supabase';
 import Dashboard from '../components/admin/Dashboard';
-import RecetasCRUD from '../components/admin/RecetasCRUD';
 import ProductosCRUD from '../components/admin/ProductosCRUD';
+import InsumosCRUD from '../components/admin/InsumosCRUD';
+import RecetasCRUD from '../components/admin/RecetasCRUD';
+import MesasQR from '../components/admin/MesasQR';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -26,51 +27,49 @@ const AdminPage = () => {
 
         <nav style={styles.nav}>
           <button
-            style={{
-              ...styles.navBtn,
-              ...(seccionActiva === 'productos' ? styles.navBtnActivo : {}),
-            }}
+            style={{ ...styles.navBtn, ...(seccionActiva === 'productos' ? styles.navBtnActivo : {}) }}
             onClick={() => setSeccionActiva('productos')}
           >
             🍛 Productos
           </button>
           <button
-            style={{
-              ...styles.navBtn,
-              ...(seccionActiva === 'dashboard' ? styles.navBtnActivo : {}),
-            }}
+            style={{ ...styles.navBtn, ...(seccionActiva === 'dashboard' ? styles.navBtnActivo : {}) }}
             onClick={() => setSeccionActiva('dashboard')}
           >
             📊 Dashboard
           </button>
-          <button 
-              style={{...styles.navBtn,
-              ...(seccionActiva === 'inventario' ? styles.navBtnActivo : {}),
-          }}
-          onClick={() => setSeccionActiva('inventario')}>
-      📦 Inventario
-        </button>
-        <button
-          style={{
-          ...styles.navBtn,
-          ...(seccionActiva === 'recetas' ? styles.navBtnActivo : {}),
-        }}
-          onClick={() => setSeccionActiva('recetas')}
-        >
-        📋 Recetas
-</button>
+          <button
+            style={{ ...styles.navBtn, ...(seccionActiva === 'inventario' ? styles.navBtnActivo : {}) }}
+            onClick={() => setSeccionActiva('inventario')}
+          >
+            📦 Inventario
+          </button>
+          <button
+            style={{ ...styles.navBtn, ...(seccionActiva === 'recetas' ? styles.navBtnActivo : {}) }}
+            onClick={() => setSeccionActiva('recetas')}
+          >
+            📋 Recetas
+          </button>
+          <button
+            style={{ ...styles.navBtn, ...(seccionActiva === 'qr' ? styles.navBtnActivo : {}) }}
+            onClick={() => setSeccionActiva('qr')}
+          >
+            📱 QR Mesas
+          </button>
         </nav>
+
         <button style={styles.btnLogout} onClick={handleLogout}>
           🚪 Cerrar Sesión
         </button>
       </div>
 
-      {/* ✅ Contenedor del contenido principal */}
+      {/* Contenido principal */}
       <div style={styles.contenido}>
         {seccionActiva === 'productos' && <ProductosCRUD />}
         {seccionActiva === 'dashboard' && <Dashboard />}
         {seccionActiva === 'inventario' && <InsumosCRUD />}
         {seccionActiva === 'recetas' && <RecetasCRUD />}
+        {seccionActiva === 'qr' && <MesasQR />}
       </div>
 
     </div>
