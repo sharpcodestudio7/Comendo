@@ -1,10 +1,7 @@
 // src/components/admin/MonitorMesas.jsx
-// Monitor en tiempo real del estado de las mesas del restaurante
-// RF-2.3 — Monitor de Mesas Activas
-// RF-3.3 — Cierre y Liberación de Mesa
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
+import ModalConfirm from '../ModalConfirm';
 
 const ESTADOS_MESA = {
   Libre: { color: '#2D6A4F', emoji: '🟢', label: 'Libre' },
@@ -17,11 +14,10 @@ const MonitorMesas = () => {
   const [pedidosPorMesa, setPedidosPorMesa] = useState({});
   const [cargando, setCargando] = useState(true);
   const [cerrando, setCerrando] = useState(null);
+  const [modalCerrar, setModalCerrar] = useState(null);
 
-  // ── Carga inicial ─────────────────────────────────────────────────────
   const cargarDatos = async () => {
     setCargando(true);
-
     const [{ data: mesasData }, { data: pedidosData }] = await Promise.all([
       supabase.from('mesas').select('*').order('numero'),
       supabase
@@ -40,7 +36,6 @@ const MonitorMesas = () => {
         .in('estado_actual', ['Recibido', 'Preparando', 'Listo', 'Entregado']),
     ]);
 
-    // Agrupa los pedidos activos por mesa
     const agrupados = {};
     pedidosData?.forEach((pedido) => {
       if (!agrupados[pedido.id_mesa]) agrupados[pedido.id_mesa] = [];
@@ -56,30 +51,24 @@ const MonitorMesas = () => {
     cargarDatos();
   }, []);
 
-  // ── Realtime — escucha cambios en mesas y pedidos ─────────────────────
   useEffect(() => {
     const canal = supabase
       .channel('monitor-mesas')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'mesas' }, () => {
-        cargarDatos();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => {
-        cargarDatos();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mesas' }, () => cargarDatos())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => cargarDatos())
       .subscribe();
-
     return () => supabase.removeChannel(canal);
   }, []);
 
-  // ── Cerrar mesa y liberar ─────────────────────────────────────────────
-  const cerrarMesa = async (mesa) => {
-    if (!window.confirm(`¿Confirmar pago y liberar Mesa ${mesa.numero}?`)) return;
+  const cerrarMesa = (mesa) => setModalCerrar(mesa);
 
+  const confirmarCerrarMesa = async () => {
     try {
-      setCerrando(mesa.id_mesa);
+      setCerrando(modalCerrar.id_mesa);
+      const mesaACerrar = modalCerrar;
+      setModalCerrar(null);
 
-      // 1. Marca todos los pedidos activos de la mesa como Pagado
-      const pedidosActivos = pedidosPorMesa[mesa.id_mesa] || [];
+      const pedidosActivos = pedidosPorMesa[mesaACerrar.id_mesa] || [];
       for (const pedido of pedidosActivos) {
         await supabase
           .from('pedidos')
@@ -87,11 +76,10 @@ const MonitorMesas = () => {
           .eq('id_pedido', pedido.id_pedido);
       }
 
-      // 2. Libera la mesa — estado Libre y limpia el token de sesión
       await supabase
         .from('mesas')
         .update({ estado: 'Libre', token_sesion_actual: null })
-        .eq('id_mesa', mesa.id_mesa);
+        .eq('id_mesa', mesaACerrar.id_mesa);
 
       await cargarDatos();
     } catch (err) {
@@ -101,7 +89,6 @@ const MonitorMesas = () => {
     }
   };
 
-  // ── Calcular total de una mesa ────────────────────────────────────────
   const totalMesa = (idMesa) => {
     const pedidos = pedidosPorMesa[idMesa] || [];
     return pedidos.reduce((acc, p) => acc + p.total, 0);
@@ -110,7 +97,6 @@ const MonitorMesas = () => {
   const formatCOP = (valor) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor);
 
-  // ── Resumen general ───────────────────────────────────────────────────
   const mesasLibres = mesas.filter((m) => m.estado === 'Libre').length;
   const mesasOcupadas = mesas.filter((m) => m.estado === 'Ocupada').length;
   const mesasPorPagar = mesas.filter((m) => m.estado === 'Por_Pagar').length;
@@ -119,15 +105,11 @@ const MonitorMesas = () => {
 
   return (
     <div>
-      {/* Header */}
       <div style={styles.header}>
         <h2 style={styles.titulo}>🗺 Monitor de Mesas</h2>
-        <button style={styles.btnRefresh} onClick={cargarDatos}>
-          🔄 Actualizar
-        </button>
+        <button style={styles.btnRefresh} onClick={cargarDatos}>🔄 Actualizar</button>
       </div>
 
-      {/* Resumen KPIs */}
       <div style={styles.kpiGrid}>
         <div style={{ ...styles.kpiCard, borderTop: `3px solid ${ESTADOS_MESA.Libre.color}` }}>
           <span style={styles.kpiLabel}>🟢 Libres</span>
@@ -147,7 +129,6 @@ const MonitorMesas = () => {
         </div>
       </div>
 
-      {/* Grid de mesas */}
       <div style={styles.grid}>
         {mesas.map((mesa) => {
           const estado = ESTADOS_MESA[mesa.estado] || ESTADOS_MESA.Libre;
@@ -156,11 +137,7 @@ const MonitorMesas = () => {
           const estaOcupada = mesa.estado !== 'Libre';
 
           return (
-            <div key={mesa.id_mesa} style={{
-              ...styles.card,
-              borderTop: `4px solid ${estado.color}`,
-            }}>
-              {/* Header de la tarjeta */}
+            <div key={mesa.id_mesa} style={{ ...styles.card, borderTop: `4px solid ${estado.color}` }}>
               <div style={styles.cardHeader}>
                 <h3 style={styles.mesaNumero}>Mesa {mesa.numero}</h3>
                 <span style={{ ...styles.estadoBadge, backgroundColor: estado.color }}>
@@ -168,19 +145,13 @@ const MonitorMesas = () => {
                 </span>
               </div>
 
-              {/* Pedidos activos */}
               {pedidos.length > 0 ? (
                 <div style={styles.pedidosLista}>
                   {pedidos.map((pedido) => (
                     <div key={pedido.id_pedido} style={styles.pedidoItem}>
                       <div style={styles.pedidoHeader}>
-                        <span style={styles.pedidoId}>
-                          #{pedido.id_pedido.slice(0, 6).toUpperCase()}
-                        </span>
-                        <span style={{
-                          ...styles.pedidoEstado,
-                          color: pedido.estado_actual === 'Listo' ? '#4CAF50' : '#F57C00',
-                        }}>
+                        <span style={styles.pedidoId}>#{pedido.id_pedido.slice(0, 6).toUpperCase()}</span>
+                        <span style={{ ...styles.pedidoEstado, color: pedido.estado_actual === 'Listo' ? '#4CAF50' : '#F57C00' }}>
                           {pedido.estado_actual}
                         </span>
                       </div>
@@ -191,8 +162,6 @@ const MonitorMesas = () => {
                       ))}
                     </div>
                   ))}
-
-                  {/* Total de la mesa */}
                   <div style={styles.totalMesa}>
                     <span style={styles.totalLabel}>Total Mesa</span>
                     <span style={styles.totalValor}>{formatCOP(total)}</span>
@@ -202,7 +171,6 @@ const MonitorMesas = () => {
                 <p style={styles.sinPedidos}>Sin pedidos activos</p>
               )}
 
-              {/* Botón cerrar mesa */}
               {estaOcupada && (
                 <button
                   style={{
@@ -220,6 +188,18 @@ const MonitorMesas = () => {
           );
         })}
       </div>
+
+      {/* ✅ Modal dentro del return */}
+      {modalCerrar && (
+        <ModalConfirm
+          titulo="Cobrar y Liberar Mesa"
+          mensaje={`¿Confirmar pago y liberar Mesa ${modalCerrar.numero}? El total es ${formatCOP(totalMesa(modalCerrar.id_mesa))}.`}
+          labelConfirmar="💳 Confirmar Pago"
+          colorConfirmar="#2D6A4F"
+          onConfirmar={confirmarCerrarMesa}
+          onCancelar={() => setModalCerrar(null)}
+        />
+      )}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 // src/components/admin/ProductosCRUD.jsx
 import { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
+import ModalConfirm from '../ModalConfirm';
 import { exportarProductos } from '../../api/exportService';
 
 const ProductosCRUD = () => {
@@ -13,6 +14,7 @@ const ProductosCRUD = () => {
   const [error, setError] = useState(null);
   const [imagenPreview, setImagenPreview] = useState(null);
   const [imagenArchivo, setImagenArchivo] = useState(null);
+  const [modalEliminar, setModalEliminar] = useState(null);
 
   const formVacio = { nombre: '', descripcion: '', precio: '', id_categoria: '', disponible: true };
   const [form, setForm] = useState(formVacio);
@@ -58,35 +60,22 @@ const ProductosCRUD = () => {
     setModalAbierto(true);
   };
 
-  // ── Manejo de imagen seleccionada ─────────────────────────────────────
   const handleImagenChange = (e) => {
     const archivo = e.target.files[0];
     if (!archivo) return;
     setImagenArchivo(archivo);
-    // Muestra preview local antes de subir
     setImagenPreview(URL.createObjectURL(archivo));
   };
 
-  // ── Subir imagen a Supabase Storage ──────────────────────────────────
   const subirImagen = async (productoId) => {
     if (!imagenArchivo) return null;
-
     const extension = imagenArchivo.name.split('.').pop();
     const nombreArchivo = `${productoId}.${extension}`;
-
     const { error } = await supabase.storage
       .from('productos')
-      .upload(nombreArchivo, imagenArchivo, {
-        upsert: true, // Sobreescribe si ya existe
-      });
-
+      .upload(nombreArchivo, imagenArchivo, { upsert: true });
     if (error) throw new Error(`Error al subir imagen: ${error.message}`);
-
-    // Retorna la URL pública de la imagen
-    const { data } = supabase.storage
-      .from('productos')
-      .getPublicUrl(nombreArchivo);
-
+    const { data } = supabase.storage.from('productos').getPublicUrl(nombreArchivo);
     return data.publicUrl;
   };
 
@@ -98,7 +87,6 @@ const ProductosCRUD = () => {
     try {
       setGuardando(true);
       setError(null);
-
       const payload = {
         nombre: form.nombre,
         descripcion: form.descripcion,
@@ -106,35 +94,19 @@ const ProductosCRUD = () => {
         id_categoria: form.id_categoria,
         disponible: form.disponible,
       };
-
       if (productoEditando) {
-        // Editar producto existente
         await supabase.from('productos').update(payload).eq('id_producto', productoEditando.id_producto);
-
-        // Si hay nueva imagen, subirla y actualizar la URL
         if (imagenArchivo) {
           const urlImagen = await subirImagen(productoEditando.id_producto);
-          await supabase.from('productos')
-            .update({ imagen_url: urlImagen })
-            .eq('id_producto', productoEditando.id_producto);
+          await supabase.from('productos').update({ imagen_url: urlImagen }).eq('id_producto', productoEditando.id_producto);
         }
       } else {
-        // Crear producto nuevo
-        const { data: nuevo } = await supabase
-          .from('productos')
-          .insert(payload)
-          .select()
-          .single();
-
-        // Si hay imagen, subirla y actualizar la URL
+        const { data: nuevo } = await supabase.from('productos').insert(payload).select().single();
         if (imagenArchivo && nuevo) {
           const urlImagen = await subirImagen(nuevo.id_producto);
-          await supabase.from('productos')
-            .update({ imagen_url: urlImagen })
-            .eq('id_producto', nuevo.id_producto);
+          await supabase.from('productos').update({ imagen_url: urlImagen }).eq('id_producto', nuevo.id_producto);
         }
       }
-
       await cargarDatos();
       setModalAbierto(false);
     } catch (err) {
@@ -145,19 +117,21 @@ const ProductosCRUD = () => {
     }
   };
 
-  const handleEliminar = async (productoId) => {
-    if (!window.confirm('¿Estás seguro de eliminar este producto?')) return;
-    // Elimina la imagen del storage si existe
-    await supabase.storage.from('productos').remove([`${productoId}.jpg`, `${productoId}.png`, `${productoId}.webp`]);
-    await supabase.from('productos').delete().eq('id_producto', productoId);
+  const handleEliminar = (productoId) => setModalEliminar(productoId);
+
+  const confirmarEliminar = async () => {
+    await supabase.storage.from('productos').remove([
+      `${modalEliminar}.jpg`,
+      `${modalEliminar}.png`,
+      `${modalEliminar}.webp`
+    ]);
+    await supabase.from('productos').delete().eq('id_producto', modalEliminar);
+    setModalEliminar(null);
     await cargarDatos();
   };
 
   const toggleDisponible = async (producto) => {
-    await supabase
-      .from('productos')
-      .update({ disponible: !producto.disponible })
-      .eq('id_producto', producto.id_producto);
+    await supabase.from('productos').update({ disponible: !producto.disponible }).eq('id_producto', producto.id_producto);
     await cargarDatos();
   };
 
@@ -189,13 +163,8 @@ const ProductosCRUD = () => {
           productos.map((producto) => (
             <div key={producto.id_producto} style={styles.fila}>
               <div style={styles.filaIzquierda}>
-                {/* Imagen del producto */}
                 {producto.imagen_url ? (
-                  <img
-                    src={producto.imagen_url}
-                    alt={producto.nombre}
-                    style={styles.imagenMiniatura}
-                  />
+                  <img src={producto.imagen_url} alt={producto.nombre} style={styles.imagenMiniatura} />
                 ) : (
                   <div style={styles.imagenPlaceholder}>🍽</div>
                 )}
@@ -220,6 +189,7 @@ const ProductosCRUD = () => {
         )}
       </div>
 
+      {/* Modal crear/editar */}
       {modalAbierto && (
         <>
           <div style={styles.overlay} onClick={() => setModalAbierto(false)} />
@@ -259,16 +229,10 @@ const ProductosCRUD = () => {
                   </option>
                 ))}
               </select>
-
-              {/* Selector de imagen */}
               <div style={styles.imagenUpload}>
                 <label style={styles.label}>Imagen del producto</label>
                 {imagenPreview && (
-                  <img
-                    src={imagenPreview}
-                    alt="Preview"
-                    style={styles.imagenPreview}
-                  />
+                  <img src={imagenPreview} alt="Preview" style={styles.imagenPreview} />
                 )}
                 <input
                   type="file"
@@ -278,7 +242,6 @@ const ProductosCRUD = () => {
                 />
                 <p style={styles.imagenHint}>JPG, PNG o WebP — máx 2MB</p>
               </div>
-
               <label style={styles.checkLabel}>
                 <input
                   type="checkbox"
@@ -288,13 +251,9 @@ const ProductosCRUD = () => {
                 <span style={{ color: '#ccc', marginLeft: '8px' }}>Disponible en el menú</span>
               </label>
             </div>
-
             {error && <p style={styles.error}>{error}</p>}
-
             <div style={styles.modalBotones}>
-              <button style={styles.btnCancelar} onClick={() => setModalAbierto(false)}>
-                Cancelar
-              </button>
+              <button style={styles.btnCancelar} onClick={() => setModalAbierto(false)}>Cancelar</button>
               <button
                 style={{ ...styles.btnGuardar, opacity: guardando ? 0.7 : 1 }}
                 onClick={handleGuardar}
@@ -306,6 +265,19 @@ const ProductosCRUD = () => {
           </div>
         </>
       )}
+
+      {/* ✅ Modal eliminar DENTRO del return */}
+      {modalEliminar && (
+        <ModalConfirm
+          titulo="Eliminar Producto"
+          mensaje="¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer."
+          labelConfirmar="Eliminar"
+          colorConfirmar="#E53935"
+          onConfirmar={confirmarEliminar}
+          onCancelar={() => setModalEliminar(null)}
+        />
+      )}
+
     </div>
   );
 };
