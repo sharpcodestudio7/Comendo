@@ -15,11 +15,14 @@ const MenuPage = () => {
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [carritoAbierto, setCarritoAbierto] = useState(false);
   const totalItems = useCartStore((s) => s.totalItems());
+  const [busqueda, setBusqueda] = useState('');
 
   const productosFiltrados =
-    categoriaActiva === 'Todos'
-      ? productos
-      : productos.filter((p) => p.categorias?.nombre === categoriaActiva);
+  productos.filter((p) => {
+    const coincideCategoria = categoriaActiva === 'Todos' || p.categorias?.nombre === categoriaActiva;
+    const coincideBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
+    return coincideCategoria && coincideBusqueda;
+  });
 
   if (cargando) return (
   <div style={styles.pagina}>
@@ -60,7 +63,25 @@ const MenuPage = () => {
           🛒 <span>{totalItems}</span>
         </div>
       </header>
-
+      {/* Barra de búsqueda */}
+      <div style={styles.busquedaContainer}>
+        <span style={styles.busquedaIcono}>🔍</span>
+        <input
+          type="text"
+          placeholder="Buscar platos..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          style={styles.busquedaInput}
+        />
+        {busqueda && (
+          <button
+            style={styles.busquedaLimpiar}
+            onClick={() => setBusqueda('')}
+          >
+            ✕
+          </button>
+        )}
+      </div>
       <div style={styles.filtros}>
         {['Todos', ...categorias.map((c) => c.nombre)].map((cat) => (
           <button
@@ -106,6 +127,23 @@ const styles = {
   filtroActivo: { backgroundColor: '#2e7d32', color: '#fff' },
   grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
   mensaje: { textAlign: 'center', marginTop: '40px', fontSize: '16px' },
+  busquedaContainer: {
+  display: 'flex', alignItems: 'center',
+  backgroundColor: '#f5f5f5',
+  borderRadius: '12px', padding: '10px 14px',
+  marginBottom: '12px', gap: '8px',
+  border: '1px solid #e0e0e0',
+},
+busquedaIcono: { fontSize: '16px', color: '#888' },
+busquedaInput: {
+  flex: 1, border: 'none', background: 'transparent',
+  fontSize: '15px', outline: 'none', color: '#333',
+},
+busquedaLimpiar: {
+  background: 'none', border: 'none',
+  color: '#888', cursor: 'pointer',
+  fontSize: '14px', padding: '0',
+},
 };
 
 export default MenuPage;
