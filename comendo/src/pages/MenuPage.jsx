@@ -5,6 +5,7 @@ import useMenu from '../hooks/useMenu';
 import useCartStore from '../store/useCartStore';
 import ProductCard from '../components/ProductCard';
 import CartDrawer from '../components/CartDrawer';
+import SkeletonCard from '../components/SkeletonCard';
 
 const MenuPage = () => {
   // ✅ useParams DENTRO del componente, junto a los demás hooks
@@ -20,7 +21,34 @@ const MenuPage = () => {
       ? productos
       : productos.filter((p) => p.categorias?.nombre === categoriaActiva);
 
-  if (cargando) return <p style={styles.mensaje}>Cargando menú...</p>;
+  if (cargando) return (
+  <div style={styles.pagina}>
+    <header style={styles.header}>
+      <h1 style={styles.titulo}>🍽 Mr. Arroz Paisa</h1>
+      <div style={styles.carrito}>🛒 <span>0</span></div>
+    </header>
+
+    {/* Filtros skeleton */}
+    <div style={styles.filtros}>
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} style={{
+          width: '80px', height: '36px', borderRadius: '20px',
+          background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+          backgroundSize: '200% 100%',
+          animation: 'shimmer 1.5s infinite',
+          flexShrink: 0,
+        }} />
+      ))}
+    </div>
+
+    {/* Grid skeleton — 4 tarjetas */}
+    <div style={styles.grid}>
+      {[1, 2, 3, 4].map((i) => (
+        <SkeletonCard key={i} />
+      ))}
+    </div>
+  </div>
+);
   if (error)    return <p style={styles.mensaje}>Error: {error}</p>;
 
   return (
