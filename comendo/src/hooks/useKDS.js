@@ -1,6 +1,7 @@
 // src/hooks/useKDS.js
 import { useState, useEffect } from 'react';
 import { supabase } from '../api/supabase';
+import useKDSSound from './useKDSSound';
 
 const ESTADOS_KDS = ['Recibido', 'Preparando', 'Listo'];
 
@@ -11,6 +12,7 @@ const useKDS = () => {
   const [pedidos, setPedidos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const { sonarNuevoPedido } = useKDSSound();
 
   // ── Carga inicial ─────────────────────────────────────────────────────
   const cargarPedidos = async () => {
@@ -50,15 +52,26 @@ const useKDS = () => {
         { event: '*', schema: 'public', table: 'pedidos' },
         (payload) => {
           if (payload.eventType === 'INSERT') {
+            // 🔔 Suena alerta al recibir nuevo pedido
+            sonarNuevoPedido();
             cargarPedidos();
           }
+
           if (payload.eventType === 'UPDATE') {
             const estadoNuevo = payload.new.estado_actual;
+
             if (ESTADOS_KDS.includes(estadoNuevo)) {
               setPedidos((prev) =>
                 prev.map((p) =>
                   p.id_pedido === payload.new.id_pedido
-                    ? { ...p, estado_actual: estadoNuevo }
+                    ? {
+                        ...p,
+                        estado_actual: estadoNuevo,
+                        // Si acaba de pasar a Listo, guardamos el timestamp exacto
+                        fecha_listo: estadoNuevo === 'Listo'
+                          ? new Date().toISOString()
+                          : p.fecha_listo,
+                      }
                     : p
                 )
               );
@@ -76,32 +89,23 @@ const useKDS = () => {
   }, []);
 
   // ── Auto-limpieza de pedidos Listos ───────────────────────────────────
-  // Cada 30 segundos revisa si hay pedidos "Listo" que llevan más de
-  // MINUTOS_VISIBLE_LISTO minutos y los cambia a "Entregado" automáticamente
   useEffect(() => {
-    const intervalo = setInterval(async () => {
+    const intervalo = setInterval(() => {
       const ahora = new Date();
 
-      const pedidosAArchivar = pedidos.filter((p) => {
-        if (p.estado_actual !== 'Listo') return false;
-        const minutosEnListo = (ahora - new Date(p.fecha_creacion)) / 60000;
-        return minutosEnListo >= MINUTOS_VISIBLE_LISTO;
-      });
+      setPedidos((prev) =>
+        prev.filter((p) => {
+          if (p.estado_actual !== 'Listo') return true;
 
-      for (const pedido of pedidosAArchivar) {
-        await supabase
-          .from('pedidos')
-          .update({ estado_actual: 'Entregado' })
-          .eq('id_pedido', pedido.id_pedido);
-      }
+          const fechaReferencia = p.fecha_listo
+            ? new Date(p.fecha_listo)
+            : new Date(p.fecha_creacion);
 
-      // Si archivamos alguno, los quitamos del estado local
-      if (pedidosAArchivar.length > 0) {
-        setPedidos((prev) =>
-          prev.filter((p) => !pedidosAArchivar.find((a) => a.id_pedido === p.id_pedido))
-        );
-      }
-    }, 30000); // Revisa cada 30 segundos
+          const minutosEnListo = (ahora - fechaReferencia) / 60000;
+          return minutosEnListo < MINUTOS_VISIBLE_LISTO;
+        })
+      );
+    }, 5000); // Revisa cada 5 segundos
 
     return () => clearInterval(intervalo);
   }, [pedidos]);

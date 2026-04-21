@@ -1,4 +1,5 @@
 // src/pages/KDSPage.jsx
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../api/supabase';
 import useKDS from '../hooks/useKDS';
@@ -86,10 +87,21 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
 const KDSPage = () => {
   const navigate = useNavigate();
   const { pedidos, cargando, error, cambiarEstado } = useKDS();
+  const [nuevoPedidoAlerta, setNuevoPedidoAlerta] = useState(false);
+
+  // ── Alerta visual cuando llegan pedidos nuevos ────────────────────────
+  useEffect(() => {
+    const recibidos = pedidos.filter((p) => p.estado_actual === 'Recibido');
+    if (recibidos.length > 0) {
+      setNuevoPedidoAlerta(true);
+      const timer = setTimeout(() => setNuevoPedidoAlerta(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [pedidos]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/cocina-login');
+    navigate('/login');
   };
 
   if (cargando) return <p style={styles.mensaje}>Cargando pedidos...</p>;
@@ -108,6 +120,13 @@ const KDSPage = () => {
           </button>
         </div>
       </div>
+
+      {/* Alerta visual de nuevo pedido */}
+      {nuevoPedidoAlerta && (
+        <div style={styles.alertaNuevoPedido}>
+          🔔 ¡NUEVO PEDIDO ENTRANTE!
+        </div>
+      )}
 
       {/* Tablero Kanban */}
       <div style={styles.tablero}>
@@ -155,6 +174,7 @@ const styles = {
   titulo: { margin: 0, color: '#fff', fontSize: '22px' },
   onlineIndicator: { color: '#4CAF50', fontWeight: '700', fontSize: '14px' },
   btnLogout: { padding: '8px 16px', backgroundColor: 'transparent', border: '1px solid #E53935', color: '#E53935', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' },
+  alertaNuevoPedido: { backgroundColor: '#E53935', color: '#fff', textAlign: 'center', padding: '12px', fontSize: '16px', fontWeight: '700' },
   tablero: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', padding: '20px', flex: 1 },
   columna: { backgroundColor: '#16213e', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column' },
   columnaHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', color: '#fff', fontWeight: '700', fontSize: '15px' },
