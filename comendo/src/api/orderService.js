@@ -49,34 +49,49 @@ export const crearPedido = async (mesaId, items) => {
 
   if (errorDetalle) throw new Error(`Error al guardar detalle: ${errorDetalle.message}`);
 
-  // ── PASO 4: Descontar inventario según recetas (RF-3.1) ───────────────
-  for (const item of items) {
-    const { data: recetas } = await supabase
-      .from('recetas')
-      .select('id_insumo, cantidad_requerida')
-      .eq('id_producto', item.producto.id_producto);
 
-    if (!recetas || recetas.length === 0) continue;
+  // ── PASO 4: Descontar inventario y registrar movimientos (RF-3.1) ─────
+for (const item of items) {
+  const { data: recetas } = await supabase
+    .from('recetas')
+    .select('id_insumo, cantidad_requerida')
+    .eq('id_producto', item.producto.id_producto);
 
-    for (const receta of recetas) {
-      const cantidadADescontar = receta.cantidad_requerida * item.cantidad;
+  if (!recetas || recetas.length === 0) continue;
 
-      const { data: insumo } = await supabase
-        .from('insumos')
-        .select('cantidad_stock')
-        .eq('id_insumo', receta.id_insumo)
-        .single();
+  for (const receta of recetas) {
+    const cantidadADescontar = receta.cantidad_requerida * item.cantidad;
 
-      if (!insumo) continue;
+    const { data: insumo } = await supabase
+      .from('insumos')
+      .select('cantidad_stock')
+      .eq('id_insumo', receta.id_insumo)
+      .single();
 
-      const nuevoStock = Math.max(0, insumo.cantidad_stock - cantidadADescontar);
+    if (!insumo) continue;
 
-      await supabase
-        .from('insumos')
-        .update({ cantidad_stock: nuevoStock })
-        .eq('id_insumo', receta.id_insumo);
-    }
+    const cantidadAnterior = insumo.cantidad_stock;
+    const nuevoStock = Math.max(0, cantidadAnterior - cantidadADescontar);
+
+    // Actualiza el stock
+    await supabase
+      .from('insumos')
+      .update({ cantidad_stock: nuevoStock })
+      .eq('id_insumo', receta.id_insumo);
+
+    // ✅ Registra el movimiento automático
+    await supabase
+      .from('movimientos_inventario')
+      .insert({
+        id_insumo: receta.id_insumo,
+        tipo: 'Salida',
+        cantidad: cantidadADescontar,
+        cantidad_anterior: cantidadAnterior,
+        cantidad_nueva: nuevoStock,
+        motivo: `Pedido confirmado`,
+        id_pedido: pedido.id_pedido,
+      });
   }
-
+}
   return pedido;
 };

@@ -8,6 +8,7 @@ import InsumosCRUD from '../components/admin/InsumosCRUD';
 import RecetasCRUD from '../components/admin/RecetasCRUD';
 import MesasQR from '../components/admin/MesasQR';
 import MonitorMesas from '../components/admin/MonitorMesas';
+import MovimientosInventario from '../components/admin/MovimientosInventario';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -59,6 +60,12 @@ const AdminPage = () => {
             📋 Recetas
           </button>
           <button
+            style={{ ...styles.navBtn, ...(seccionActiva === 'movimientos' ? styles.navBtnActivo : {}) }}
+            onClick={() => setSeccionActiva('movimientos')}
+          >
+            📊 Movimientos
+          </button>
+          <button
             style={{ ...styles.navBtn, ...(seccionActiva === 'qr' ? styles.navBtnActivo : {}) }}
             onClick={() => setSeccionActiva('qr')}
           >
@@ -77,6 +84,7 @@ const AdminPage = () => {
         {seccionActiva === 'monitor' && <MonitorMesas />}
         {seccionActiva === 'dashboard' && <Dashboard />}
         {seccionActiva === 'inventario' && <InsumosCRUD />}
+        {seccionActiva === 'movimientos' && <MovimientosInventario />}
         {seccionActiva === 'recetas' && <RecetasCRUD />}
         {seccionActiva === 'qr' && <MesasQR />}
       </div>
