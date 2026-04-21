@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
 import { exportarRecetas } from '../../api/exportService';
+import ModalConfirm from '../ModalConfirm';
 
 const RecetasCRUD = () => {
   const [productos, setProductos] = useState([]);
@@ -12,6 +13,7 @@ const RecetasCRUD = () => {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  const [modalQuitarInsumo, setModalQuitarInsumo] = useState(null);
 
   const formVacio = { id_insumo: '', cantidad_requerida: '' };
   const [form, setForm] = useState(formVacio);
@@ -74,13 +76,18 @@ const RecetasCRUD = () => {
     }
   };
 
-  const handleEliminarInsumo = async (idProducto, idInsumo) => {
-    if (!window.confirm('¿Quitar este insumo de la receta?')) return;
+  // ── Eliminar insumo de receta ─────────────────────────────────────────
+  const handleEliminarInsumo = (idProducto, idInsumo) => {
+    setModalQuitarInsumo({ idProducto, idInsumo });
+  };
+
+  const confirmarQuitarInsumo = async () => {
     await supabase
       .from('recetas')
       .delete()
-      .eq('id_producto', idProducto)
-      .eq('id_insumo', idInsumo);
+      .eq('id_producto', modalQuitarInsumo.idProducto)
+      .eq('id_insumo', modalQuitarInsumo.idInsumo);
+    setModalQuitarInsumo(null);
     await cargarDatos();
   };
 
@@ -207,6 +214,19 @@ const RecetasCRUD = () => {
           </div>
         </>
       )}
+
+      {/* ✅ Modal confirmar quitar insumo */}
+      {modalQuitarInsumo && (
+        <ModalConfirm
+          titulo="Quitar Insumo"
+          mensaje="¿Quitar este insumo de la receta?"
+          labelConfirmar="Quitar"
+          colorConfirmar="#F57C00"
+          onConfirmar={confirmarQuitarInsumo}
+          onCancelar={() => setModalQuitarInsumo(null)}
+        />
+      )}
+
     </div>
   );
 };

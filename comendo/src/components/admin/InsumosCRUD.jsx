@@ -1,9 +1,8 @@
 // src/components/admin/InsumosCRUD.jsx
-// Gestión de insumos del inventario — Crear, editar, eliminar y ver stock
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
 import { exportarInsumos } from '../../api/exportService';
+import ModalConfirm from '../ModalConfirm';
 
 const UNIDADES = ['Gramos', 'Kilogramos', 'Litros', 'Mililitros', 'Unidades'];
 
@@ -14,16 +13,14 @@ const InsumosCRUD = () => {
   const [insumoEditando, setInsumoEditando] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  const [modalEliminar, setModalEliminar] = useState(null);
 
   const formVacio = { nombre: '', cantidad_stock: '', unidad_medida: 'Gramos' };
   const [form, setForm] = useState(formVacio);
 
   const cargarInsumos = async () => {
     setCargando(true);
-    const { data } = await supabase
-      .from('insumos')
-      .select('*')
-      .order('nombre');
+    const { data } = await supabase.from('insumos').select('*').order('nombre');
     setInsumos(data || []);
     setCargando(false);
   };
@@ -58,19 +55,16 @@ const InsumosCRUD = () => {
     try {
       setGuardando(true);
       setError(null);
-
       const payload = {
         nombre: form.nombre,
         cantidad_stock: parseFloat(form.cantidad_stock),
         unidad_medida: form.unidad_medida,
       };
-
       if (insumoEditando) {
         await supabase.from('insumos').update(payload).eq('id_insumo', insumoEditando.id_insumo);
       } else {
         await supabase.from('insumos').insert(payload);
       }
-
       await cargarInsumos();
       setModalAbierto(false);
     } catch (err) {
@@ -80,19 +74,20 @@ const InsumosCRUD = () => {
     }
   };
 
-  const handleEliminar = async (insumoId) => {
-    if (!window.confirm('¿Eliminar este insumo? Esto también eliminará sus recetas asociadas.')) return;
-    await supabase.from('recetas').delete().eq('id_insumo', insumoId);
-    await supabase.from('insumos').delete().eq('id_insumo', insumoId);
+  const handleEliminar = (insumoId) => setModalEliminar(insumoId);
+
+  const confirmarEliminar = async () => {
+    await supabase.from('recetas').delete().eq('id_insumo', modalEliminar);
+    await supabase.from('insumos').delete().eq('id_insumo', modalEliminar);
+    setModalEliminar(null);
     await cargarInsumos();
   };
 
-  // Determina el color del stock según nivel
   const colorStock = (cantidad, unidad) => {
     const limite = unidad === 'Unidades' ? 10 : 1000;
-    if (cantidad <= limite * 0.25) return '#E53935';      // Crítico — rojo
-    if (cantidad <= limite * 0.5) return '#F57C00';       // Bajo — naranja
-    return '#4CAF50';                                      // Normal — verde
+    if (cantidad <= limite * 0.25) return '#E53935';
+    if (cantidad <= limite * 0.5) return '#F57C00';
+    return '#4CAF50';
   };
 
   if (cargando) return <p style={{ color: '#fff' }}>Cargando inventario...</p>;
@@ -101,21 +96,18 @@ const InsumosCRUD = () => {
     <div>
       {/* Header */}
       <div style={styles.header}>
-  <h2 style={styles.titulo}>📦 Gestión de Inventario</h2>
-  <div style={{ display: 'flex', gap: '10px' }}>
-    <button
-      style={styles.btnExportar}
-      onClick={() => exportarInsumos(insumos)}
-    >
-      ⬇ Exportar Excel
-    </button>
-    <button style={styles.btnCrear} onClick={abrirCrear}>
-      + Nuevo Insumo
-    </button>
-  </div>
-</div>
+        <h2 style={styles.titulo}>📦 Gestión de Inventario</h2>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button style={styles.btnExportar} onClick={() => exportarInsumos(insumos)}>
+            ⬇ Exportar Excel
+          </button>
+          <button style={styles.btnCrear} onClick={abrirCrear}>
+            + Nuevo Insumo
+          </button>
+        </div>
+      </div>
 
-      {/* Resumen de stock crítico */}
+      {/* Alerta stock crítico */}
       {insumos.filter(i => {
         const limite = i.unidad_medida === 'Unidades' ? 10 : 1000;
         return i.cantidad_stock <= limite * 0.25;
@@ -135,10 +127,7 @@ const InsumosCRUD = () => {
               <div style={styles.filaInfo}>
                 <span style={styles.nombre}>{insumo.nombre}</span>
                 <div style={styles.stockRow}>
-                  <span style={{
-                    ...styles.stock,
-                    color: colorStock(insumo.cantidad_stock, insumo.unidad_medida),
-                  }}>
+                  <span style={{ ...styles.stock, color: colorStock(insumo.cantidad_stock, insumo.unidad_medida) }}>
                     {insumo.cantidad_stock} {insumo.unidad_medida}
                   </span>
                   {insumo.cantidad_stock <= (insumo.unidad_medida === 'Unidades' ? 2.5 : 250) && (
@@ -147,12 +136,8 @@ const InsumosCRUD = () => {
                 </div>
               </div>
               <div style={styles.filaAcciones}>
-                <button style={styles.btnEditar} onClick={() => abrirEditar(insumo)}>
-                  ✏️ Editar
-                </button>
-                <button style={styles.btnEliminar} onClick={() => handleEliminar(insumo.id_insumo)}>
-                  🗑 Eliminar
-                </button>
+                <button style={styles.btnEditar} onClick={() => abrirEditar(insumo)}>✏️ Editar</button>
+                <button style={styles.btnEliminar} onClick={() => handleEliminar(insumo.id_insumo)}>🗑 Eliminar</button>
               </div>
             </div>
           ))
@@ -191,13 +176,9 @@ const InsumosCRUD = () => {
                 ))}
               </select>
             </div>
-
             {error && <p style={styles.error}>{error}</p>}
-
             <div style={styles.modalBotones}>
-              <button style={styles.btnCancelar} onClick={() => setModalAbierto(false)}>
-                Cancelar
-              </button>
+              <button style={styles.btnCancelar} onClick={() => setModalAbierto(false)}>Cancelar</button>
               <button
                 style={{ ...styles.btnGuardar, opacity: guardando ? 0.7 : 1 }}
                 onClick={handleGuardar}
@@ -209,6 +190,19 @@ const InsumosCRUD = () => {
           </div>
         </>
       )}
+
+      {/* ✅ Modal eliminar DENTRO del return */}
+      {modalEliminar && (
+        <ModalConfirm
+          titulo="Eliminar Insumo"
+          mensaje="¿Eliminar este insumo? También se eliminarán sus recetas asociadas."
+          labelConfirmar="Eliminar"
+          colorConfirmar="#E53935"
+          onConfirmar={confirmarEliminar}
+          onCancelar={() => setModalEliminar(null)}
+        />
+      )}
+
     </div>
   );
 };
@@ -217,6 +211,7 @@ const styles = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
   titulo: { margin: 0, color: '#fff', fontSize: '22px' },
   btnCrear: { padding: '10px 20px', backgroundColor: '#2D6A4F', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' },
+  btnExportar: { padding: '10px 20px', backgroundColor: '#1565C0', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' },
   alertaCritica: { backgroundColor: '#4a1515', border: '1px solid #E53935', borderRadius: '8px', padding: '12px 16px', color: '#ff8a80', fontSize: '14px', marginBottom: '16px' },
   tabla: { display: 'flex', flexDirection: 'column', gap: '10px' },
   fila: { backgroundColor: '#16213e', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' },
@@ -237,7 +232,6 @@ const styles = {
   modalBotones: { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
   btnCancelar: { padding: '10px 20px', backgroundColor: 'transparent', border: '1px solid #555', color: '#ccc', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
   btnGuardar: { padding: '10px 20px', backgroundColor: '#2D6A4F', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' },
-  btnExportar: { padding: '10px 20px', backgroundColor: '#1565C0', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' },
 };
 
 export default InsumosCRUD;

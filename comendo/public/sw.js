@@ -1,29 +1,21 @@
 // public/sw.js
-// Service Worker para Comendo PWA
-// Estrategia Cache First para assets estáticos
-// Estrategia Network First para datos de Supabase
-
 const CACHE_NAME = 'comendo-v1';
 
-// Archivos que se cachean inmediatamente al instalar
 const ASSETS_PRECACHE = [
   '/',
   '/index.html',
   '/manifest.json',
 ];
 
-// ── Instalación ───────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-cacheando assets base');
       return cache.addAll(ASSETS_PRECACHE);
     })
   );
   self.skipWaiting();
 });
 
-// ── Activación — limpia caches viejos ─────────────────────────────────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -37,16 +29,27 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// ── Fetch — estrategia según tipo de request ──────────────────────────
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Network First para Supabase (datos siempre frescos)
+  // ✅ Ignorar URLs que no son de la app
+  if (
+    url.hostname.includes('github.dev') ||
+    url.hostname.includes('githubusercontent') ||
+    url.pathname.includes('pf-signin') ||
+    url.pathname.includes('auth/postback') ||
+    request.method !== 'GET'
+  ) {
+    return;
+  }
+
+  // Network First para Supabase
   if (url.hostname.includes('supabase.co')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
+          if (!response || response.status !== 200) return response;
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
@@ -56,7 +59,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache First para assets estáticos (JS, CSS, imágenes)
+  // Cache First para assets estáticos
   if (
     request.destination === 'script' ||
     request.destination === 'style' ||
@@ -67,6 +70,7 @@ self.addEventListener('fetch', (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((response) => {
+          if (!response || response.status !== 200) return response;
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
