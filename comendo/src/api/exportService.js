@@ -1,11 +1,9 @@
 // src/api/exportService.js
-// Servicio centralizado de exportación a Excel.
-// Cada función recibe datos ya cargados y genera un archivo .xlsx
+// Servicio de exportación a Excel. Ahora incluye exclusiones y notas en ventas.
 
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
-// ── Utilidad base ─────────────────────────────────────────────────────────
 const exportarExcel = (datos, nombreHoja, nombreArchivo) => {
   const hoja = XLSX.utils.json_to_sheet(datos);
   const libro = XLSX.utils.book_new();
@@ -60,21 +58,30 @@ export const exportarRecetas = (productos, recetas) => {
   exportarExcel(datos, 'Recetas', 'comendo_recetas');
 };
 
-// ── 4. Exportar Ventas ────────────────────────────────────────────────────
+// ── 4. Exportar Ventas (ahora con exclusiones y notas) ────────────────────
 export const exportarVentas = (pedidos) => {
   const datos = pedidos.flatMap((pedido) =>
-    pedido.detalle_pedidos.map((detalle) => ({
-      'ID Pedido': pedido.id_pedido.slice(0, 8).toUpperCase(),
-      'Mesa': pedido.mesas?.numero ?? '—',
-      'Fecha': new Date(pedido.fecha_creacion).toLocaleDateString('es-CO'),
-      'Hora': new Date(pedido.fecha_creacion).toLocaleTimeString('es-CO'),
-      'Producto': detalle.productos?.nombre || '—',
-      'Cantidad': detalle.cantidad,
-      'Precio Unitario': detalle.precio_unitario,
-      'Subtotal': detalle.subtotal,
-      'Total Pedido': pedido.total,
-      'Estado': pedido.estado_actual,
-    }))
+    pedido.detalle_pedidos.map((detalle) => {
+      // Obtener los nombres de ingredientes excluidos
+      const exclusiones = (detalle.exclusiones_pedido || [])
+        .map((e) => e.nombre_insumo)
+        .join(', ');
+
+      return {
+        'ID Pedido': pedido.id_pedido.slice(0, 8).toUpperCase(),
+        'Mesa': pedido.mesas?.numero ?? '—',
+        'Fecha': new Date(pedido.fecha_creacion).toLocaleDateString('es-CO'),
+        'Hora': new Date(pedido.fecha_creacion).toLocaleTimeString('es-CO'),
+        'Producto': detalle.productos?.nombre || '—',
+        'Cantidad': detalle.cantidad,
+        'Precio Unitario': detalle.precio_unitario,
+        'Subtotal': detalle.subtotal,
+        'Total Pedido': pedido.total,
+        'Estado': pedido.estado_actual,
+        'Ingredientes Excluidos': exclusiones || '—',
+        'Notas del Comensal': detalle.notas || '—',
+      };
+    })
   );
   exportarExcel(datos, 'Ventas', 'comendo_ventas');
 };
