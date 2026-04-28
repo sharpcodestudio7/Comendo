@@ -1,4 +1,6 @@
 // src/pages/KDSPage.jsx
+// Vista KDS de cocina con exclusiones de ingredientes y notas del comensal.
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../api/supabase';
@@ -61,15 +63,44 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
         </span>
       </div>
 
+      {/* Lista de productos con exclusiones y notas */}
       <div style={styles.productoLista}>
-        {pedido.detalle_pedidos.map((detalle, i) => (
-          <div key={i} style={styles.productoItem}>
-            <span style={styles.productoCantidad}>{detalle.cantidad}x</span>
-            <span style={styles.productoNombre}>
-              {detalle.productos?.nombre ?? 'Producto'}
-            </span>
-          </div>
-        ))}
+        {pedido.detalle_pedidos.map((detalle, i) => {
+          const exclusiones = detalle.exclusiones_pedido || [];
+          const notas = detalle.notas;
+
+          return (
+            <div key={i} style={styles.productoBloque}>
+              {/* Línea del producto */}
+              <div style={styles.productoItem}>
+                <span style={styles.productoCantidad}>{detalle.cantidad}x</span>
+                <span style={styles.productoNombre}>
+                  {detalle.productos?.nombre ?? 'Producto'}
+                </span>
+              </div>
+
+              {/* Exclusiones: bloque rojo visible */}
+              {exclusiones.length > 0 && (
+                <div style={styles.exclusionBloque}>
+                  <span style={styles.exclusionLabel}>⛔ SIN:</span>
+                  {exclusiones.map((exc) => (
+                    <span key={exc.id_insumo} style={styles.exclusionChip}>
+                      {exc.nombre_insumo}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Notas: bloque naranja */}
+              {notas && notas.trim() && (
+                <div style={styles.notasBloque}>
+                  <span style={styles.notasIcon}>📝</span>
+                  <span style={styles.notasTexto}>{notas}</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {columna.labelBoton && (
@@ -89,7 +120,6 @@ const KDSPage = () => {
   const { pedidos, cargando, error, cambiarEstado } = useKDS();
   const [nuevoPedidoAlerta, setNuevoPedidoAlerta] = useState(false);
 
-  // ── Alerta visual cuando llegan pedidos nuevos ────────────────────────
   useEffect(() => {
     const recibidos = pedidos.filter((p) => p.estado_actual === 'Recibido');
     if (recibidos.length > 0) {
@@ -109,8 +139,6 @@ const KDSPage = () => {
 
   return (
     <div style={styles.pagina}>
-
-      {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.titulo}>🍽 Comendo — Cocina</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -121,14 +149,12 @@ const KDSPage = () => {
         </div>
       </div>
 
-      {/* Alerta visual de nuevo pedido */}
       {nuevoPedidoAlerta && (
         <div style={styles.alertaNuevoPedido}>
           🔔 ¡NUEVO PEDIDO ENTRANTE!
         </div>
       )}
 
-      {/* Tablero Kanban */}
       <div style={styles.tablero}>
         {COLUMNAS.map((columna) => {
           const pedidosColumna = pedidos.filter(
@@ -162,7 +188,6 @@ const KDSPage = () => {
           );
         })}
       </div>
-
     </div>
   );
 };
@@ -181,14 +206,44 @@ const styles = {
   badge: { backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: '12px', padding: '2px 10px', fontSize: '14px', fontWeight: '700' },
   columnaBody: { padding: '12px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' },
   vacio: { color: '#555', textAlign: 'center', marginTop: '20px', fontSize: '14px' },
+
+  // Tarjeta de pedido
   tarjeta: { backgroundColor: '#0f3460', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' },
   tarjetaHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   mesaLabel: { color: '#fff', fontWeight: '700', fontSize: '18px' },
   tiempoLabel: { fontSize: '13px' },
-  productoLista: { display: 'flex', flexDirection: 'column', gap: '4px' },
+
+  // Productos
+  productoLista: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  productoBloque: { display: 'flex', flexDirection: 'column', gap: '4px' },
   productoItem: { display: 'flex', gap: '8px', alignItems: 'center' },
   productoCantidad: { color: '#4CAF50', fontWeight: '700', fontSize: '16px', minWidth: '28px' },
   productoNombre: { color: '#e0e0e0', fontSize: '15px' },
+
+  // Exclusiones (bloque rojo para cocina)
+  exclusionBloque: {
+    display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
+    backgroundColor: 'rgba(255,23,68,0.15)',
+    border: '1px solid #ff1744',
+    borderRadius: '6px', padding: '5px 8px', marginLeft: '36px',
+  },
+  exclusionLabel: {
+    color: '#ff1744', fontSize: '12px', fontWeight: '700',
+  },
+  exclusionChip: {
+    color: '#ff8a80', fontSize: '12px', fontWeight: '600',
+  },
+
+  // Notas (bloque naranja para cocina)
+  notasBloque: {
+    display: 'flex', alignItems: 'flex-start', gap: '4px',
+    backgroundColor: 'rgba(255,167,38,0.12)',
+    border: '1px solid #ffa726',
+    borderRadius: '6px', padding: '5px 8px', marginLeft: '36px',
+  },
+  notasIcon: { fontSize: '12px' },
+  notasTexto: { color: '#ffcc80', fontSize: '12px' },
+
   botonAccion: { width: '100%', padding: '12px', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: '700', fontSize: '15px', cursor: 'pointer', minHeight: '44px' },
 };
 

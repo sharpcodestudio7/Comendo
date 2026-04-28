@@ -1,11 +1,12 @@
 // src/hooks/useKDS.js
+// Hook del Kitchen Display System.
+// Ahora trae las exclusiones de ingredientes y notas de cada detalle de pedido.
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../api/supabase';
 import useKDSSound from './useKDSSound';
 
 const ESTADOS_KDS = ['Recibido', 'Preparando', 'Listo'];
-
-// Minutos que un pedido "Listo" permanece visible en el KDS antes de archivarse
 const MINUTOS_VISIBLE_LISTO = 2;
 
 const useKDS = () => {
@@ -14,7 +15,7 @@ const useKDS = () => {
   const [error, setError] = useState(null);
   const { sonarNuevoPedido } = useKDSSound();
 
-  // ── Carga inicial ─────────────────────────────────────────────────────
+  // ── Carga inicial (ahora incluye notas y exclusiones) ─────────────────
   const cargarPedidos = async () => {
     const { data, error } = await supabase
       .from('pedidos')
@@ -24,8 +25,16 @@ const useKDS = () => {
         fecha_creacion,
         mesas ( numero ),
         detalle_pedidos (
+          id_detalle,
           cantidad,
-          productos ( nombre )
+          notas,
+          productos ( nombre ),
+          exclusiones_pedido (
+            id_insumo,
+            nombre_insumo,
+            cantidad_no_descontada,
+            unidad_medida
+          )
         )
       `)
       .in('estado_actual', ESTADOS_KDS)
@@ -52,9 +61,8 @@ const useKDS = () => {
         { event: '*', schema: 'public', table: 'pedidos' },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            // 🔔 Suena alerta al recibir nuevo pedido
             sonarNuevoPedido();
-            cargarPedidos();
+            cargarPedidos(); // Recarga completa para traer exclusiones y notas
           }
 
           if (payload.eventType === 'UPDATE') {
@@ -67,7 +75,6 @@ const useKDS = () => {
                     ? {
                         ...p,
                         estado_actual: estadoNuevo,
-                        // Si acaba de pasar a Listo, guardamos el timestamp exacto
                         fecha_listo: estadoNuevo === 'Listo'
                           ? new Date().toISOString()
                           : p.fecha_listo,
@@ -92,20 +99,17 @@ const useKDS = () => {
   useEffect(() => {
     const intervalo = setInterval(() => {
       const ahora = new Date();
-
       setPedidos((prev) =>
         prev.filter((p) => {
           if (p.estado_actual !== 'Listo') return true;
-
           const fechaReferencia = p.fecha_listo
             ? new Date(p.fecha_listo)
             : new Date(p.fecha_creacion);
-
           const minutosEnListo = (ahora - fechaReferencia) / 60000;
           return minutosEnListo < MINUTOS_VISIBLE_LISTO;
         })
       );
-    }, 5000); // Revisa cada 5 segundos
+    }, 5000);
 
     return () => clearInterval(intervalo);
   }, [pedidos]);
