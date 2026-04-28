@@ -1,11 +1,15 @@
 // src/components/ProductCard.jsx
 // Tarjeta visual de cada producto del menú.
-// Recibe el producto como prop y despacha acciones al store del carrito.
+// Al tocar "Añadir" abre el modal de detalle con ingredientes y notas.
+// Si ya está en el carrito, muestra los controles de cantidad directamente.
 
+import { useState } from 'react';
 import useCartStore from '../store/useCartStore';
+import ProductDetailModal from './ProductDetailModal';
 
 const ProductCard = ({ producto }) => {
   const { items, agregarItem, quitarItem } = useCartStore();
+  const [modalAbierto, setModalAbierto] = useState(false);
 
   // Busca si este producto ya está en el carrito
   const itemEnCarrito = items.find((i) => i.producto.id_producto === producto.id_producto);
@@ -19,44 +23,49 @@ const ProductCard = ({ producto }) => {
   }).format(producto.precio);
 
   return (
-    <div style={styles.card}>
-      {/* Imagen del producto */}
-      {producto.imagen_url && (
-        <img
-          src={producto.imagen_url}
-          alt={producto.nombre}
-          style={styles.imagen}
+    <>
+      <div style={styles.card}>
+        {/* Imagen del producto */}
+        {producto.imagen_url && (
+          <img src={producto.imagen_url} alt={producto.nombre} style={styles.imagen} />
+        )}
+
+        {/* Info del producto */}
+        <div style={styles.info}>
+          <h3 style={styles.nombre}>{producto.nombre}</h3>
+          <p style={styles.descripcion}>{producto.descripcion}</p>
+          <span style={styles.precio}>{precioFormateado}</span>
+        </div>
+
+        {/* Control de cantidad */}
+        <div style={styles.controles}>
+          {cantidad === 0 ? (
+            // Primera vez: abre el modal para personalizar
+            <button style={styles.btnAnadir} onClick={() => setModalAbierto(true)}>
+              + Añadir
+            </button>
+          ) : (
+            // Ya está en el carrito: controles rápidos de cantidad
+            <div style={styles.contador}>
+              <button style={styles.btnContador} onClick={() => quitarItem(producto.id_producto)}>−</button>
+              <span style={styles.cantidad}>{cantidad}</span>
+              <button style={styles.btnContador} onClick={() => agregarItem(producto)}>+</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal de detalle con ingredientes y notas */}
+      {modalAbierto && (
+        <ProductDetailModal
+          producto={producto}
+          onCerrar={() => setModalAbierto(false)}
         />
       )}
-
-      {/* Info del producto */}
-      <div style={styles.info}>
-        <h3 style={styles.nombre}>{producto.nombre}</h3>
-        <p style={styles.descripcion}>{producto.descripcion}</p>
-        <span style={styles.precio}>{precioFormateado}</span>
-      </div>
-
-      {/* Control de cantidad */}
-      <div style={styles.controles}>
-        {cantidad === 0 ? (
-          // Si no está en el carrito, muestra botón "Añadir"
-          <button style={styles.btnAnadir} onClick={() => agregarItem(producto)}>
-            + Añadir
-          </button>
-        ) : (
-          // Si ya está, muestra los controles de cantidad
-          <div style={styles.contador}>
-            <button style={styles.btnContador} onClick={() => quitarItem(producto.id_producto)}>−</button>
-            <span style={styles.cantidad}>{cantidad}</span>
-            <button style={styles.btnContador} onClick={() => agregarItem(producto)}>+</button>
-          </div>
-        )}
-      </div>
-    </div>
+    </>
   );
 };
 
-// Estilos inline básicos — los reemplazaremos con Tailwind más adelante
 const styles = {
   card: {
     border: '1px solid #e0e0e0',
