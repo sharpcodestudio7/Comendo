@@ -1,7 +1,18 @@
+// src/store/useCartStore.js
+// Store global del carrito con Zustand.
+// Cada item ahora puede tener exclusiones de ingredientes y notas para cocina.
+
 import { create } from 'zustand';
 
 const useCartStore = create((set, get) => ({
   items: [],
+  // Estructura de cada item:
+  // {
+  //   producto: { id_producto, nombre, precio, ... },
+  //   cantidad: 1,
+  //   exclusiones: [{ id_insumo, nombre, cantidad_requerida, unidad_medida }],
+  //   notas: ''
+  // }
 
   agregarItem: (producto) => {
     const { items } = get();
@@ -15,7 +26,8 @@ const useCartStore = create((set, get) => ({
         ),
       });
     } else {
-      set({ items: [...items, { producto, cantidad: 1 }] });
+      // Al agregar por primera vez, inicializa exclusiones vacías y notas vacías
+      set({ items: [...items, { producto, cantidad: 1, exclusiones: [], notas: '' }] });
     }
   },
 
@@ -36,9 +48,37 @@ const useCartStore = create((set, get) => ({
     }
   },
 
-  // 👈 NUEVA ACCIÓN
   eliminarItem: (productoId) => {
     set({ items: get().items.filter((i) => i.producto.id_producto !== productoId) });
+  },
+
+  // ── NUEVAS ACCIONES ──────────────────────────────────────────────────
+
+  // Alterna un insumo como excluido/incluido para un producto específico
+  toggleExclusion: (productoId, insumo) => {
+    set({
+      items: get().items.map((i) => {
+        if (i.producto.id_producto !== productoId) return i;
+
+        const yaExcluido = i.exclusiones.some((e) => e.id_insumo === insumo.id_insumo);
+
+        return {
+          ...i,
+          exclusiones: yaExcluido
+            ? i.exclusiones.filter((e) => e.id_insumo !== insumo.id_insumo)
+            : [...i.exclusiones, insumo],
+        };
+      }),
+    });
+  },
+
+  // Actualiza las notas de texto libre para un producto específico
+  setNotas: (productoId, notas) => {
+    set({
+      items: get().items.map((i) =>
+        i.producto.id_producto === productoId ? { ...i, notas } : i
+      ),
+    });
   },
 
   limpiarCarrito: () => set({ items: [] }),
