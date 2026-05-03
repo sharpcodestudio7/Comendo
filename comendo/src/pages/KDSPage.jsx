@@ -103,6 +103,14 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
         })}
       </div>
 
+      {/* Mesero asignado — solo visible en columna Listo */}
+      {pedido.mesero?.nombre && (
+        <div style={styles.meseroBloque}>
+          <span style={styles.meseroIcon}>🛎</span>
+          <span style={styles.meseroNombre}>{pedido.mesero.nombre}</span>
+        </div>
+      )}
+
       {columna.labelBoton && (
         <button
           style={{ ...styles.botonAccion, backgroundColor: columna.colorBoton }}
@@ -245,6 +253,11 @@ const styles = {
   notasTexto: { color: '#ffcc80', fontSize: '12px' },
 
   botonAccion: { width: '100%', padding: '12px', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: '700', fontSize: '15px', cursor: 'pointer', minHeight: '44px' },
+
+  // Mesero asignado
+  meseroBloque: { display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(45,106,79,0.2)', border: '1px solid #2D6A4F', borderRadius: '6px', padding: '5px 10px' },
+  meseroIcon: { fontSize: '14px' },
+  meseroNombre: { color: '#4CAF50', fontSize: '13px', fontWeight: '700' },
 };
 
 export default KDSPage;

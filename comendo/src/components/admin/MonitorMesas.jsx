@@ -9,12 +9,19 @@ const ESTADOS_MESA = {
   Por_Pagar: { color: '#E53935', emoji: '🔴', label: 'Por Pagar' },
 };
 
+const METODOS_PAGO = [
+  { id: 'efectivo',  label: 'Efectivo',  emoji: '💵', color: '#2D6A4F' },
+  { id: 'nequi',     label: 'Nequi',     emoji: '💜', color: '#7B1FA2' },
+  { id: 'daviplata', label: 'Daviplata', emoji: '🔴', color: '#E53935' },
+];
+
 const MonitorMesas = () => {
   const [mesas, setMesas] = useState([]);
   const [pedidosPorMesa, setPedidosPorMesa] = useState({});
   const [cargando, setCargando] = useState(true);
   const [cerrando, setCerrando] = useState(null);
   const [modalCerrar, setModalCerrar] = useState(null);
+  const [editandoPago, setEditandoPago] = useState(null); // id_pedido que se está editando
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -27,7 +34,9 @@ const MonitorMesas = () => {
           id_mesa,
           estado_actual,
           total,
+          metodo_pago,
           fecha_creacion,
+          mesero:usuarios!pedidos_id_mesero_fkey ( nombre ),
           detalle_pedidos (
             cantidad,
             productos ( nombre )
@@ -59,6 +68,15 @@ const MonitorMesas = () => {
       .subscribe();
     return () => supabase.removeChannel(canal);
   }, []);
+
+  const cambiarMetodoPago = async (pedidoId, nuevoMetodo) => {
+    await supabase
+      .from('pedidos')
+      .update({ metodo_pago: nuevoMetodo })
+      .eq('id_pedido', pedidoId);
+    setEditandoPago(null);
+    await cargarDatos();
+  };
 
   const cerrarMesa = (mesa) => setModalCerrar(mesa);
 
@@ -147,21 +165,69 @@ const MonitorMesas = () => {
 
               {pedidos.length > 0 ? (
                 <div style={styles.pedidosLista}>
-                  {pedidos.map((pedido) => (
-                    <div key={pedido.id_pedido} style={styles.pedidoItem}>
-                      <div style={styles.pedidoHeader}>
-                        <span style={styles.pedidoId}>#{pedido.id_pedido.slice(0, 6).toUpperCase()}</span>
-                        <span style={{ ...styles.pedidoEstado, color: pedido.estado_actual === 'Listo' ? '#4CAF50' : '#F57C00' }}>
-                          {pedido.estado_actual}
-                        </span>
+                  {pedidos.map((pedido) => {
+                    const metodo = METODOS_PAGO.find((m) => m.id === pedido.metodo_pago);
+                    const estaEditando = editandoPago === pedido.id_pedido;
+                    return (
+                      <div key={pedido.id_pedido} style={styles.pedidoItem}>
+                        <div style={styles.pedidoHeader}>
+                          <span style={styles.pedidoId}>#{pedido.id_pedido.slice(0, 6).toUpperCase()}</span>
+                          <span style={{ ...styles.pedidoEstado, color: pedido.estado_actual === 'Listo' ? '#4CAF50' : '#F57C00' }}>
+                            {pedido.estado_actual}
+                          </span>
+                        </div>
+                        {pedido.detalle_pedidos.map((d, i) => (
+                          <span key={i} style={styles.pedidoProducto}>
+                            {d.cantidad}x {d.productos?.nombre}
+                          </span>
+                        ))}
+
+                        {/* Mesero asignado */}
+                        {pedido.mesero?.nombre && (
+                          <div style={styles.meseroRow}>
+                            <span style={styles.meseroBadge}>🛎 {pedido.mesero.nombre}</span>
+                          </div>
+                        )}
+
+                        {/* Método de pago */}
+                        {!estaEditando ? (
+                          <div style={styles.pagoRow}>
+                            {metodo ? (
+                              <span style={{ ...styles.pagoBadge, backgroundColor: metodo.color }}>
+                                {metodo.emoji} {metodo.label}
+                              </span>
+                            ) : (
+                              <span style={styles.pagoSinDefinir}>Sin método</span>
+                            )}
+                            <button
+                              style={styles.btnEditarPago}
+                              onClick={() => setEditandoPago(pedido.id_pedido)}
+                            >
+                              ✏️ Cambiar
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={styles.pagoEditor}>
+                            <span style={styles.pagoEditorLabel}>Selecciona método:</span>
+                            <div style={styles.pagoEditorBotones}>
+                              {METODOS_PAGO.map((m) => (
+                                <button
+                                  key={m.id}
+                                  style={{ ...styles.pagoEditorBtn, borderColor: m.color, color: m.color }}
+                                  onClick={() => cambiarMetodoPago(pedido.id_pedido, m.id)}
+                                >
+                                  {m.emoji} {m.label}
+                                </button>
+                              ))}
+                            </div>
+                            <button style={styles.btnCancelarPago} onClick={() => setEditandoPago(null)}>
+                              Cancelar
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      {pedido.detalle_pedidos.map((d, i) => (
-                        <span key={i} style={styles.pedidoProducto}>
-                          {d.cantidad}x {d.productos?.nombre}
-                        </span>
-                      ))}
-                    </div>
-                  ))}
+                    );
+                  })}
                   <div style={styles.totalMesa}>
                     <span style={styles.totalLabel}>Total Mesa</span>
                     <span style={styles.totalValor}>{formatCOP(total)}</span>
@@ -228,6 +294,19 @@ const styles = {
   totalValor: { color: '#4CAF50', fontSize: '18px', fontWeight: '700' },
   sinPedidos: { color: '#555', fontSize: '14px', textAlign: 'center', margin: '8px 0' },
   btnCerrar: { width: '100%', padding: '12px', backgroundColor: '#E53935', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', minHeight: '44px' },
+
+  // Método de pago en tarjeta
+  pagoRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' },
+  pagoBadge: { padding: '3px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: '700', color: '#fff' },
+  pagoSinDefinir: { color: '#555', fontSize: '12px', fontStyle: 'italic' },
+  btnEditarPago: { background: 'none', border: 'none', color: '#888', fontSize: '12px', cursor: 'pointer', padding: '2px 4px' },
+  pagoEditor: { display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px', backgroundColor: '#16213e', borderRadius: '8px', padding: '8px' },
+  pagoEditorLabel: { color: '#ccc', fontSize: '11px', fontWeight: '600' },
+  pagoEditorBotones: { display: 'flex', gap: '6px' },
+  pagoEditorBtn: { flex: 1, padding: '6px 2px', border: '1px solid', borderRadius: '6px', backgroundColor: 'transparent', cursor: 'pointer', fontSize: '11px', fontWeight: '600' },
+  btnCancelarPago: { background: 'none', border: 'none', color: '#888', fontSize: '11px', cursor: 'pointer', alignSelf: 'center' },
+  meseroRow: { marginTop: '4px' },
+  meseroBadge: { backgroundColor: 'rgba(45,106,79,0.2)', color: '#4CAF50', border: '1px solid #2D6A4F', borderRadius: '10px', padding: '2px 10px', fontSize: '12px', fontWeight: '600' },
 };
 
 export default MonitorMesas;

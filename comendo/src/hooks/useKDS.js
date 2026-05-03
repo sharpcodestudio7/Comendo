@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../api/supabase';
 import useKDSSound from './useKDSSound';
+import { asignarMeseroAutomatico } from '../api/meseroService';
 
 const ESTADOS_KDS = ['Recibido', 'Preparando', 'Listo'];
 const MINUTOS_VISIBLE_LISTO = 2;
@@ -23,6 +24,8 @@ const useKDS = () => {
         id_pedido,
         estado_actual,
         fecha_creacion,
+        id_mesero,
+        mesero:usuarios!pedidos_id_mesero_fkey ( nombre ),
         mesas ( numero ),
         detalle_pedidos (
           id_detalle,
@@ -123,6 +126,13 @@ const useKDS = () => {
 
     if (error) {
       console.error('Error al cambiar estado:', error.message);
+      return;
+    }
+
+    // Auto-asignar mesero cuando el pedido pasa a Listo
+    if (nuevoEstado === 'Listo') {
+      await asignarMeseroAutomatico(pedidoId);
+      cargarPedidos(); // Recargar para mostrar el mesero asignado
     }
   };
 

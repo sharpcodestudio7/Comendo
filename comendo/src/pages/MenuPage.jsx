@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import useMenu from '../hooks/useMenu';
 import useCartStore from '../store/useCartStore';
+import useActivePedido from '../hooks/useActivePedido';
 import ProductCard from '../components/ProductCard';
 import CartDrawer from '../components/CartDrawer';
 import SkeletonCard from '../components/SkeletonCard';
@@ -12,6 +13,7 @@ const MenuPage = () => {
   const { mesaId } = useParams();
 
   const { categorias, productos, cargando, error } = useMenu();
+  const { pedidoActivo, refrescar: refrescarPedido } = useActivePedido(mesaId);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [carritoAbierto, setCarritoAbierto] = useState(false);
   const totalItems = useCartStore((s) => s.totalItems());
@@ -103,11 +105,12 @@ const MenuPage = () => {
         ))}
       </div>
 
-      {/* ✅ mesaId ya fluye hacia el CartDrawer */}
       <CartDrawer
         abierto={carritoAbierto}
         onCerrar={() => setCarritoAbierto(false)}
         mesaId={mesaId}
+        pedidoActivo={pedidoActivo}
+        onPedidoCreado={refrescarPedido}
       />
     </div>
   );

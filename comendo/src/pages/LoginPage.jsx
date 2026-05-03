@@ -42,6 +42,8 @@ const LoginPage = () => {
         navigate('/admin');
       } else if (usuario.rol === 'Operario_Cocina') {
         navigate('/cocina');
+      } else if (usuario.rol === 'Mesero') {
+        navigate('/mesero');
       } else {
         await supabase.auth.signOut();
         setError('Rol no reconocido. Contacta al administrador.');

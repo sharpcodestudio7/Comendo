@@ -20,7 +20,7 @@ const Dashboard = () => {
     // ── 1. Total de ventas y número de pedidos ────────────────────────────
     const { data: pedidos } = await supabase
       .from('pedidos')
-      .select('total, estado_actual, fecha_creacion')
+      .select('total, estado_actual, fecha_creacion, metodo_pago')
       .eq('estado_actual', 'Listo');
 
     const totalVentas = pedidos?.reduce((acc, p) => acc + p.total, 0) || 0;
@@ -85,7 +85,21 @@ const Dashboard = () => {
 
     const totalExclusiones = exclusiones?.length || 0;
 
-    // ── 6. Pedidos completos para exportar (ahora con exclusiones y notas) ─
+    // ── 6. Distribución de métodos de pago ────────────────────────────────
+    const { data: pedidosConMetodo } = await supabase
+      .from('pedidos')
+      .select('metodo_pago')
+      .not('metodo_pago', 'is', null);
+
+    const distribucionPagos = { efectivo: 0, nequi: 0, daviplata: 0, sin_definir: 0 };
+    pedidosConMetodo?.forEach(({ metodo_pago }) => {
+      if (distribucionPagos[metodo_pago] !== undefined) {
+        distribucionPagos[metodo_pago]++;
+      }
+    });
+    const totalConMetodo = pedidosConMetodo?.length || 0;
+
+    // ── 7. Pedidos completos para exportar (ahora con exclusiones y notas) ─
     const { data: pedidosExport } = await supabase
       .from('pedidos')
       .select(`
@@ -112,6 +126,7 @@ const Dashboard = () => {
       totalVentas, totalPedidos, ticketPromedio,
       productosRanking, insumos: insumos || [],
       pedidosPorEstado, exclusionesRanking, totalExclusiones,
+      distribucionPagos, totalConMetodo,
     });
     setCargando(false);
   };
@@ -224,6 +239,39 @@ const Dashboard = () => {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* ── Métodos de pago ───────────────────────────────────────────── */}
+      <div style={{ ...styles.seccionGrid, gridTemplateColumns: '1fr', marginTop: '20px' }}>
+        <div style={styles.seccion}>
+          <h3 style={styles.seccionTitulo}>💳 Métodos de Pago</h3>
+          <p style={styles.seccionSubtitulo}>
+            Distribución de {metricas.totalConMetodo} pedidos con método registrado
+          </p>
+          <div style={styles.pagosGrid}>
+            {[
+              { id: 'efectivo',  label: 'Efectivo',  emoji: '💵', color: '#2D6A4F' },
+              { id: 'nequi',     label: 'Nequi',     emoji: '💜', color: '#7B1FA2' },
+              { id: 'daviplata', label: 'Daviplata', emoji: '🔴', color: '#E53935' },
+            ].map((m) => {
+              const cantidad = metricas.distribucionPagos[m.id] || 0;
+              const pct = metricas.totalConMetodo > 0
+                ? Math.round((cantidad / metricas.totalConMetodo) * 100)
+                : 0;
+              return (
+                <div key={m.id} style={{ ...styles.pagoCard, borderTop: `3px solid ${m.color}` }}>
+                  <span style={styles.pagoEmoji}>{m.emoji}</span>
+                  <span style={styles.pagoLabel}>{m.label}</span>
+                  <span style={{ ...styles.pagoCantidad, color: m.color }}>{cantidad}</span>
+                  <div style={styles.pagoBarraFondo}>
+                    <div style={{ ...styles.pagoBarraRelleno, width: `${pct}%`, backgroundColor: m.color }} />
+                  </div>
+                  <span style={styles.pagoPct}>{pct}%</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -352,6 +400,16 @@ const styles = {
   // Exclusiones ranking
   exclusionVeces: { color: '#E53935', fontWeight: '700', fontSize: '14px' },
   exclusionAhorro: { color: '#888', fontSize: '12px' },
+
+  // Métodos de pago
+  pagosGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '8px' },
+  pagoCard: { backgroundColor: '#0f3460', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' },
+  pagoEmoji: { fontSize: '24px' },
+  pagoLabel: { color: '#ccc', fontSize: '13px', fontWeight: '600' },
+  pagoCantidad: { fontSize: '28px', fontWeight: '700' },
+  pagoBarraFondo: { width: '100%', backgroundColor: '#16213e', borderRadius: '4px', height: '6px', overflow: 'hidden' },
+  pagoBarraRelleno: { height: '100%', borderRadius: '4px', transition: 'width 0.5s ease' },
+  pagoPct: { color: '#888', fontSize: '12px' },
 
   // Notas recientes
   notaItem: { backgroundColor: '#0f3460', borderRadius: '8px', padding: '10px 12px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '6px' },

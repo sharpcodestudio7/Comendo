@@ -9,6 +9,7 @@ import RecetasCRUD from '../components/admin/RecetasCRUD';
 import MesasQR from '../components/admin/MesasQR';
 import MonitorMesas from '../components/admin/MonitorMesas';
 import MovimientosInventario from '../components/admin/MovimientosInventario';
+import MeserosCRUD from '../components/admin/MeserosCRUD';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -71,6 +72,12 @@ const AdminPage = () => {
           >
             📱 QR Mesas
           </button>
+          <button
+            style={{ ...styles.navBtn, ...(seccionActiva === 'meseros' ? styles.navBtnActivo : {}) }}
+            onClick={() => setSeccionActiva('meseros')}
+          >
+            🛎 Meseros
+          </button>
         </nav>
 
         <button style={styles.btnLogout} onClick={handleLogout}>
@@ -87,6 +94,7 @@ const AdminPage = () => {
         {seccionActiva === 'movimientos' && <MovimientosInventario />}
         {seccionActiva === 'recetas' && <RecetasCRUD />}
         {seccionActiva === 'qr' && <MesasQR />}
+        {seccionActiva === 'meseros' && <MeserosCRUD />}
       </div>
 
     </div>

@@ -3,8 +3,9 @@
 // Usa Supabase Realtime para escuchar cambios de estado sin recargar la página.
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../api/supabase';
+
 
 // Definimos los pasos del flujo en orden
 const PASOS = [
@@ -30,9 +31,11 @@ const PASOS = [
 
 const OrderTrackingPage = () => {
   const { pedidoId } = useParams();
+  const navigate = useNavigate();
   const [pedido, setPedido] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [cuentaSolicitada, setCuentaSolicitada] = useState(false);
 
   // ── PASO 1: Carga inicial del pedido ──────────────────────────────────────
   useEffect(() => {
@@ -41,9 +44,11 @@ const OrderTrackingPage = () => {
         .from('pedidos')
         .select(`
           id_pedido,
+          id_mesa,
           estado_actual,
           total,
           fecha_creacion,
+          mesero:usuarios!pedidos_id_mesero_fkey ( nombre ),
           detalle_pedidos (
             cantidad,
             precio_unitario,
@@ -90,6 +95,15 @@ const OrderTrackingPage = () => {
     // Limpiamos la suscripción cuando el componente se desmonta
     return () => supabase.removeChannel(canal);
   }, [pedidoId]);
+
+  const solicitarCuenta = async () => {
+    if (!pedido?.id_mesa) return;
+    await supabase
+      .from('mesas')
+      .update({ estado: 'Por_Pagar' })
+      .eq('id_mesa', pedido.id_mesa);
+    setCuentaSolicitada(true);
+  };
 
   // ── Renders condicionales ─────────────────────────────────────────────────
   if (cargando) return <p style={styles.mensaje}>Buscando tu pedido...</p>;
@@ -154,6 +168,17 @@ const OrderTrackingPage = () => {
         })}
       </div>
 
+      {/* Mesero asignado — visible cuando el pedido está Listo */}
+      {pedido.estado_actual === 'Listo' && pedido.mesero?.nombre && (
+        <div style={styles.meseroBanner}>
+          <span style={styles.meseroIcono}>🛎</span>
+          <div>
+            <p style={styles.meseroTitulo}>Tu pedido será entregado por</p>
+            <p style={styles.meseroNombre}>{pedido.mesero.nombre}</p>
+          </div>
+        </div>
+      )}
+
       {/* Resumen del pedido */}
       <div style={styles.resumen}>
         <h3 style={styles.resumenTitulo}>Resumen del Pedido</h3>
@@ -163,6 +188,43 @@ const OrderTrackingPage = () => {
           </p>
         ))}
       </div>
+
+      {/* Acciones según estado del pedido */}
+      {pedido.estado_actual === 'Listo' && !cuentaSolicitada && (
+        <div style={styles.accionesListo}>
+          <button
+            style={styles.btnCuenta}
+            onClick={solicitarCuenta}
+          >
+            💳 Solicitar la cuenta
+          </button>
+          <button
+            style={styles.btnAgregarMas}
+            onClick={() => pedido.id_mesa ? navigate(`/mesa/${pedido.id_mesa}`) : navigate('/')}
+          >
+            🍹 Pedir algo más
+          </button>
+        </div>
+      )}
+
+      {pedido.estado_actual === 'Listo' && cuentaSolicitada && (
+        <div style={styles.cuentaSolicitadaBanner}>
+          <span style={styles.cuentaIcono}>✅</span>
+          <div>
+            <p style={styles.cuentaTitulo}>¡Cuenta solicitada!</p>
+            <p style={styles.cuentaSub}>Un mesero se acercará en un momento.</p>
+          </div>
+        </div>
+      )}
+
+      {['Recibido', 'Preparando'].includes(pedido.estado_actual) && (
+        <button
+          style={styles.btnAgregarMas}
+          onClick={() => pedido.id_mesa ? navigate(`/mesa/${pedido.id_mesa}`) : navigate('/')}
+        >
+          ➕ Agregar más productos al pedido
+        </button>
+      )}
 
     </div>
   );
@@ -192,6 +254,35 @@ const styles = {
   resumen: { backgroundColor: '#f9f9f9', borderRadius: '12px', padding: '16px' },
   resumenTitulo: { margin: '0 0 12px', fontSize: '16px', fontWeight: '700' },
   resumenItem: { margin: '4px 0', fontSize: '14px', color: '#444' },
+  accionesListo: { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' },
+  btnCuenta: {
+    width: '100%', padding: '14px', backgroundColor: '#2D6A4F',
+    color: '#fff', border: 'none', borderRadius: '10px',
+    fontWeight: '700', fontSize: '16px', cursor: 'pointer',
+  },
+  btnAgregarMas: {
+    display: 'block', width: '100%', marginTop: '16px',
+    padding: '14px', backgroundColor: '#fff',
+    color: '#2D6A4F', border: '2px solid #2D6A4F',
+    borderRadius: '10px', fontWeight: '700', fontSize: '16px',
+    cursor: 'pointer',
+  },
+  meseroBanner: {
+    display: 'flex', alignItems: 'center', gap: '12px',
+    backgroundColor: '#e8f5e9', border: '1px solid #2D6A4F',
+    borderRadius: '10px', padding: '14px 16px', marginBottom: '16px',
+  },
+  meseroIcono: { fontSize: '28px' },
+  meseroTitulo: { margin: 0, fontSize: '12px', color: '#555' },
+  meseroNombre: { margin: '2px 0 0', fontSize: '16px', fontWeight: '700', color: '#2D6A4F' },
+  cuentaSolicitadaBanner: {
+    display: 'flex', alignItems: 'center', gap: '12px',
+    marginTop: '16px', backgroundColor: '#e8f5e9',
+    border: '1px solid #2D6A4F', borderRadius: '10px', padding: '16px',
+  },
+  cuentaIcono: { fontSize: '28px' },
+  cuentaTitulo: { margin: 0, fontWeight: '700', color: '#2D6A4F', fontSize: '15px' },
+  cuentaSub: { margin: '4px 0 0', color: '#555', fontSize: '13px' },
 };
 
 export default OrderTrackingPage;

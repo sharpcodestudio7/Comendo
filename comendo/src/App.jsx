@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProtectedKDS from './components/ProtectedKDS';
+import MeseroPage from './pages/MeseroPage';
 
 function App() {
   return (
@@ -23,6 +24,9 @@ function App() {
             <KDSPage />
           </ProtectedKDS>
         } />
+
+        {/* Módulo 4 — Mesero */}
+        <Route path="/mesero" element={<MeseroPage />} />
 
         {/* Módulo 3 — Admin */}
         <Route path="/login" element={<LoginPage />} />
