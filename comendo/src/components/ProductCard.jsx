@@ -1,8 +1,3 @@
-// src/components/ProductCard.jsx
-// Tarjeta visual de cada producto del menú.
-// Al tocar "Añadir" abre el modal de detalle con ingredientes y notas.
-// Si ya está en el carrito, muestra los controles de cantidad directamente.
-
 import { useState } from 'react';
 import useCartStore from '../store/useCartStore';
 import ProductDetailModal from './ProductDetailModal';
@@ -10,53 +5,56 @@ import ProductDetailModal from './ProductDetailModal';
 const ProductCard = ({ producto, soloLectura = false }) => {
   const { items, agregarItem, quitarItem } = useCartStore();
   const [modalAbierto, setModalAbierto] = useState(false);
-
   const itemEnCarrito = items.find((i) => i.producto.id_producto === producto.id_producto);
   const cantidad = itemEnCarrito ? itemEnCarrito.cantidad : 0;
 
-  // Formatea el precio en pesos colombianos
-  const precioFormateado = new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
+  const precioFormateado = '$' + new Intl.NumberFormat('es-CO', {
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(producto.precio);
 
   return (
     <>
       <div style={styles.card}>
-        {/* Imagen del producto */}
-        {producto.imagen_url && (
+        {producto.imagen_url ? (
           <img src={producto.imagen_url} alt={producto.nombre} style={styles.imagen} />
+        ) : (
+          <div style={styles.imagenPlaceholder}>
+            <span style={{ fontSize: '36px', opacity: 0.2 }}>🍽</span>
+          </div>
         )}
 
-        {/* Info del producto */}
         <div style={styles.info}>
           <h3 style={styles.nombre}>{producto.nombre}</h3>
-          <p style={styles.descripcion}>{producto.descripcion}</p>
-          <span style={styles.precio}>{precioFormateado}</span>
-        </div>
-
-        {/* Control de cantidad */}
-        <div style={styles.controles}>
-          {soloLectura ? (
-            <button style={styles.btnSoloLectura} disabled>
-              🔒 Solo vista
-            </button>
-          ) : cantidad === 0 ? (
-            <button style={styles.btnAnadir} onClick={() => setModalAbierto(true)}>
-              + Añadir
-            </button>
-          ) : (
-            <div style={styles.contador}>
-              <button style={styles.btnContador} onClick={() => quitarItem(producto.id_producto)}>−</button>
-              <span style={styles.cantidad}>{cantidad}</span>
-              <button style={styles.btnContador} onClick={() => agregarItem(producto)}>+</button>
-            </div>
+          {producto.descripcion && (
+            <p style={styles.descripcion}>{producto.descripcion}</p>
           )}
+          <span style={styles.precio}>
+            {precioFormateado} <span style={styles.precioCOP}>COP</span>
+          </span>
+
+          <div style={styles.controles}>
+            {soloLectura ? (
+              <button style={styles.btnSoloLectura} disabled>Solo vista</button>
+            ) : cantidad === 0 ? (
+              <button
+                className="btn-agregar"
+                style={styles.btnAgregar}
+                onClick={() => setModalAbierto(true)}
+              >
+                Agregar
+              </button>
+            ) : (
+              <div style={styles.contador}>
+                <button style={styles.btnContador} onClick={() => quitarItem(producto.id_producto)}>−</button>
+                <span style={styles.cantidad}>{cantidad}</span>
+                <button style={{ ...styles.btnContador, ...styles.btnContadorMas }} onClick={() => agregarItem(producto)}>+</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Modal de detalle con ingredientes y notas */}
       {modalAbierto && (
         <ProductDetailModal
           producto={producto}
@@ -69,66 +67,124 @@ const ProductCard = ({ producto, soloLectura = false }) => {
 
 const styles = {
   card: {
-    border: '1px solid #e0e0e0',
-    borderRadius: '12px',
-    padding: '16px',
+    backgroundColor: '#1A1A1A',
+    borderRadius: '16px',
+    border: '1px solid #333333',
     display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-    backgroundColor: '#fff',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+    flexDirection: 'row',
+    overflow: 'hidden',
   },
   imagen: {
-    width: '100%',
-    height: '160px',
+    width: '140px',
+    height: '140px',
     objectFit: 'cover',
-    borderRadius: '8px',
+    borderRadius: '12px 0 0 12px',
+    flexShrink: 0,
+    display: 'block',
   },
-  info: { display: 'flex', flexDirection: 'column', gap: '4px' },
-  nombre: { margin: 0, fontSize: '16px', fontWeight: '700' },
-  descripcion: { margin: 0, fontSize: '13px', color: '#666' },
-  precio: { fontWeight: '700', color: '#2e7d32', fontSize: '15px' },
-  controles: { marginTop: '8px' },
-  btnAnadir: {
-    width: '100%',
-    padding: '10px',
-    backgroundColor: '#2e7d32',
-    color: '#fff',
+  imagenPlaceholder: {
+    width: '140px',
+    height: '140px',
+    borderRadius: '12px 0 0 12px',
+    backgroundColor: '#2A2A2A',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  info: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    minWidth: 0,
+    padding: '12px 16px',
+  },
+  nombre: {
+    margin: 0,
+    fontSize: '16px',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    lineHeight: '1.3',
+  },
+  descripcion: {
+    margin: 0,
+    fontSize: '13px',
+    color: '#999999',
+    lineHeight: '1.4',
+    display: '-webkit-box',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+  },
+  precio: {
+    fontWeight: '700',
+    color: '#C8A84E',
+    fontSize: '15px',
+    marginTop: '4px',
+  },
+  precioCOP: {
+    fontSize: '12px',
+    fontWeight: '500',
+    opacity: 0.8,
+  },
+  controles: {
+    marginTop: 'auto',
+    paddingTop: '8px',
+  },
+  btnAgregar: {
+    padding: '7px 18px',
+    backgroundColor: '#B87333',
+    color: '#000000',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '20px',
     cursor: 'pointer',
     fontWeight: '700',
-    fontSize: '14px',
+    fontSize: '13px',
+    minHeight: '34px',
+    transition: 'background-color 0.18s',
   },
   btnSoloLectura: {
-    width: '100%',
-    padding: '10px',
-    backgroundColor: '#f5f5f5',
-    color: '#999',
-    border: '1px solid #e0e0e0',
-    borderRadius: '8px',
+    padding: '7px 14px',
+    backgroundColor: '#2A2A2A',
+    color: '#555',
+    border: '1px solid #333',
+    borderRadius: '20px',
     cursor: 'not-allowed',
-    fontWeight: '600',
-    fontSize: '13px',
+    fontSize: '12px',
   },
   contador: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: '16px',
+    gap: '10px',
   },
   btnContador: {
-    width: '36px',
-    height: '36px',
+    width: '30px',
+    height: '30px',
     borderRadius: '50%',
-    border: '2px solid #2e7d32',
-    backgroundColor: '#fff',
-    color: '#2e7d32',
-    fontSize: '20px',
+    border: '1.5px solid #C8A84E',
+    backgroundColor: 'transparent',
+    color: '#C8A84E',
+    fontSize: '18px',
     cursor: 'pointer',
     fontWeight: '700',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: 1,
   },
-  cantidad: { fontSize: '18px', fontWeight: '700', minWidth: '20px', textAlign: 'center' },
+  btnContadorMas: {
+    backgroundColor: '#C8A84E',
+    color: '#0D0D0D',
+    border: 'none',
+  },
+  cantidad: {
+    fontSize: '16px',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    minWidth: '20px',
+    textAlign: 'center',
+  },
 };
 
 export default ProductCard;

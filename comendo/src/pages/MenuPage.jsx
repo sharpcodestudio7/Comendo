@@ -1,6 +1,6 @@
-// src/pages/MenuPage.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { Search, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import useMenu from '../hooks/useMenu';
 import useCartStore from '../store/useCartStore';
 import useActivePedido from '../hooks/useActivePedido';
@@ -9,177 +9,448 @@ import ProductCard from '../components/ProductCard';
 import CartDrawer from '../components/CartDrawer';
 import SkeletonCard from '../components/SkeletonCard';
 
+const CATEGORIA_CSS = `
+  @property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  @keyframes borderRotate {
+    0%   { --angle: 0deg; }
+    100% { --angle: 360deg; }
+  }
+  .categoria-border-glow {
+    background: conic-gradient(from var(--angle), #B87333, #D4A017, #FFD700, #D4A017, #B87333, #8B6914, #B87333);
+    animation: borderRotate 3s linear infinite;
+    padding: 1.5px;
+    border-radius: 25px;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .categoria-inner {
+    background: #0D0D0D;
+    border-radius: 24px;
+    padding: 8px 18px;
+    color: #FFFFFF;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    display: block;
+    white-space: nowrap;
+    font-family: sans-serif;
+  }
+  .categoria-inner:active {
+    opacity: 0.85;
+  }
+  .btn-agregar {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-agregar:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(184, 115, 51, 0.4);
+    background-color: #D4922A !important;
+  }
+  .btn-agregar:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 8px rgba(184, 115, 51, 0.3);
+  }
+  .btn-agregar::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+  }
+  .btn-agregar:hover::after {
+    width: 200px;
+    height: 200px;
+  }
+  .btn-pedido {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-pedido:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(184, 115, 51, 0.5);
+    background-color: #D4922A !important;
+  }
+  .btn-pedido:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(184, 115, 51, 0.3);
+  }
+`;
+
 const MenuPage = () => {
   const { mesaId } = useParams();
-
   const { categorias, productos, cargando, error } = useMenu();
   const { pedidoActivo, refrescar: refrescarPedido } = useActivePedido(mesaId);
   const { esDueno, cargando: cargandoSesion } = useSesionMesa(mesaId);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [carritoAbierto, setCarritoAbierto] = useState(false);
+  const [tabActiva, setTabActiva] = useState('menu');
   const totalItems = useCartStore((s) => s.totalItems());
   const [busqueda, setBusqueda] = useState('');
 
-  // Solo bloquea si hay mesaId y la sesión ya fue resuelta
   const soloLectura = !!mesaId && !cargandoSesion && !esDueno;
 
-  const productosFiltrados =
-  productos.filter((p) => {
+  useEffect(() => {
+    document.body.style.backgroundColor = '#0D0D0D';
+    return () => { document.body.style.backgroundColor = ''; };
+  }, []);
+
+  const productosFiltrados = productos.filter((p) => {
     const coincideCategoria = categoriaActiva === 'Todos' || p.categorias?.nombre === categoriaActiva;
     const coincideBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
     return coincideCategoria && coincideBusqueda;
   });
 
+  const abrirCarrito = () => {
+    setCarritoAbierto(true);
+    setTabActiva('pedido');
+  };
+
+  const cerrarCarrito = () => {
+    setCarritoAbierto(false);
+    setTabActiva('menu');
+  };
+
   if (cargando) return (
-  <div style={styles.pagina}>
-    <header style={styles.header}>
-      <h1 style={styles.titulo}>🍽 Mr. Arroz Paisa</h1>
-      <div style={styles.carrito}>🛒 <span>0</span></div>
-    </header>
-
-    {/* Filtros skeleton */}
-    <div style={styles.filtros}>
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} style={{
-          width: '80px', height: '36px', borderRadius: '20px',
-          background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-          backgroundSize: '200% 100%',
-          animation: 'shimmer 1.5s infinite',
-          flexShrink: 0,
-        }} />
-      ))}
-    </div>
-
-    {/* Grid skeleton — 4 tarjetas */}
-    <div style={styles.grid}>
-      {[1, 2, 3, 4].map((i) => (
-        <SkeletonCard key={i} />
-      ))}
-    </div>
-  </div>
-);
-  if (error)    return <p style={styles.mensaje}>Error: {error}</p>;
-
-  return (
     <div style={styles.pagina}>
       <header style={styles.header}>
-        <h1 style={styles.titulo}>🍽 Mr. Arroz Paisa</h1>
-
-        {!soloLectura && (
-          <div style={styles.carrito} onClick={() => setCarritoAbierto(true)}>
-            🛒 <span>{totalItems}</span>
-          </div>
-        )}
-      </header>
-
-      {soloLectura && (
-        <div style={styles.bannerSoloLectura}>
-          <span style={styles.bannerIcono}>🔒</span>
+        <div style={styles.headerLogo}>
+          <div style={styles.logoIcono}><UtensilsCrossed size={22} color="#C8A84E" /></div>
           <div>
-            <p style={styles.bannerTitulo}>Mesa con sesión activa</p>
-            <p style={styles.bannerSub}>
-              Otro dispositivo ya está realizando el pedido. Solo puedes ver el menú.
-            </p>
+            <h1 style={styles.restauranteNombre}>Mr. Arroz Paisa</h1>
+            <p style={styles.restauranteSubtitulo}>— Comendo —</p>
           </div>
         </div>
-      )}
-
-      {/* Barra de búsqueda */}
+        {mesaId && <div style={styles.mesaBadge}><span style={styles.mesaBadgeTexto}>Mesa {mesaId}</span></div>}
+      </header>
       <div style={styles.busquedaContainer}>
-        <span style={styles.busquedaIcono}>🔍</span>
-        <input
-          type="text"
-          placeholder="Buscar platos..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          style={styles.busquedaInput}
-        />
-        {busqueda && (
-          <button
-            style={styles.busquedaLimpiar}
-            onClick={() => setBusqueda('')}
-          >
-            ✕
-          </button>
-        )}
+        <Search size={16} color="#555" />
+        <span style={{ fontSize: '15px', color: '#555' }}>Buscar</span>
       </div>
       <div style={styles.filtros}>
-        {['Todos', ...categorias.map((c) => c.nombre)].map((cat) => (
-          <button
-            key={cat}
-            style={{
-              ...styles.filtroBtn,
-              ...(categoriaActiva === cat ? styles.filtroActivo : {}),
-            }}
-            onClick={() => setCategoriaActiva(cat)}
-          >
-            {cat}
-          </button>
+        {[80, 95, 70, 105].map((w, i) => (
+          <div key={i} style={{ width: w, height: 32, borderRadius: 20, backgroundColor: '#1A1A1A', flexShrink: 0 }} />
         ))}
       </div>
-
-      <div style={styles.grid}>
-        {productosFiltrados.map((producto) => (
-          <ProductCard
-            key={producto.id_producto}
-            producto={producto}
-            soloLectura={soloLectura || cargandoSesion}
-          />
-        ))}
+      <div style={styles.lista}>
+        {[1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
       </div>
-
-      {!soloLectura && (
-        <CartDrawer
-          abierto={carritoAbierto}
-          onCerrar={() => setCarritoAbierto(false)}
-          mesaId={mesaId}
-          pedidoActivo={pedidoActivo}
-          onPedidoCreado={refrescarPedido}
-        />
-      )}
+      <nav style={styles.bottomNav}>
+        <button style={styles.navItem}><UtensilsCrossed size={22} color="#C8A84E" /><span style={{ ...styles.navLabel, ...styles.navLabelActivo }}>Menú</span></button>
+        <button style={styles.navItem}><ShoppingBag size={22} color="#666" /><span style={styles.navLabel}>Mi Pedido</span></button>
+      </nav>
     </div>
+  );
+
+  if (error) return (
+    <div style={styles.pagina}>
+      <p style={{ color: '#666', textAlign: 'center', marginTop: '80px', fontSize: '15px' }}>Error al cargar el menú</p>
+    </div>
+  );
+
+  return (
+    <>
+      <style>{CATEGORIA_CSS}</style>
+
+      <div style={styles.pagina}>
+        <header style={styles.header}>
+          <div style={styles.headerLogo}>
+            <div style={styles.logoIcono}><UtensilsCrossed size={22} color="#C8A84E" /></div>
+            <div>
+              <h1 style={styles.restauranteNombre}>Mr. Arroz Paisa</h1>
+              <p style={styles.restauranteSubtitulo}>— Comendo —</p>
+            </div>
+          </div>
+          {mesaId && <div style={styles.mesaBadge}><span style={styles.mesaBadgeTexto}>Mesa {mesaId}</span></div>}
+        </header>
+
+        {soloLectura && (
+          <div style={styles.bannerSoloLectura}>
+            <span style={{ fontSize: '20px' }}>🔒</span>
+            <div>
+              <p style={styles.bannerTitulo}>Mesa con sesión activa</p>
+              <p style={styles.bannerSub}>Otro dispositivo ya está realizando el pedido. Solo puedes ver el menú.</p>
+            </div>
+          </div>
+        )}
+
+        <div style={styles.busquedaContainer}>
+          <Search size={16} color="#666" />
+          <input
+            type="text"
+            placeholder="Buscar"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            style={styles.busquedaInput}
+          />
+          {busqueda && (
+            <button style={styles.busquedaLimpiar} onClick={() => setBusqueda('')}>✕</button>
+          )}
+        </div>
+
+        <div style={styles.filtros}>
+          {['Todos', ...categorias.map((c) => c.nombre)].map((cat) =>
+            categoriaActiva === cat ? (
+              <button
+                key={cat}
+                style={styles.filtroActivo}
+                onClick={() => setCategoriaActiva(cat)}
+              >
+                {cat}
+              </button>
+            ) : (
+              <div key={cat} className="categoria-border-glow">
+                <button className="categoria-inner" onClick={() => setCategoriaActiva(cat)}>
+                  {cat}
+                </button>
+              </div>
+            )
+          )}
+        </div>
+
+        <div style={styles.lista}>
+          {productosFiltrados.length === 0 ? (
+            <p style={styles.sinResultados}>No se encontraron productos</p>
+          ) : (
+            productosFiltrados.map((producto) => (
+              <ProductCard
+                key={producto.id_producto}
+                producto={producto}
+                soloLectura={soloLectura || cargandoSesion}
+              />
+            ))
+          )}
+        </div>
+
+        {!soloLectura && (
+          <CartDrawer
+            abierto={carritoAbierto}
+            onCerrar={cerrarCarrito}
+            mesaId={mesaId}
+            pedidoActivo={pedidoActivo}
+            onPedidoCreado={refrescarPedido}
+          />
+        )}
+
+        <nav style={styles.bottomNav}>
+          <button style={styles.navItem} onClick={() => setTabActiva('menu')}>
+            <UtensilsCrossed size={22} color={tabActiva === 'menu' ? '#C8A84E' : '#666'} />
+            <span style={{ ...styles.navLabel, ...(tabActiva === 'menu' ? styles.navLabelActivo : {}) }}>Menú</span>
+          </button>
+
+          <button style={styles.navItem} onClick={soloLectura ? undefined : abrirCarrito}>
+            <div style={styles.navCartWrapper}>
+              <ShoppingBag size={22} color={tabActiva === 'pedido' ? '#C8A84E' : (soloLectura ? '#444' : '#666')} />
+              {!soloLectura && totalItems > 0 && <span style={styles.navBadge}>{totalItems}</span>}
+            </div>
+            <span style={{ ...styles.navLabel, ...(tabActiva === 'pedido' ? styles.navLabelActivo : {}), ...(soloLectura ? { color: '#444' } : {}) }}>
+              Mi Pedido
+            </span>
+          </button>
+
+        </nav>
+      </div>
+    </>
   );
 };
 
 const styles = {
-  pagina: { maxWidth: '480px', margin: '0 auto', padding: '16px', fontFamily: 'sans-serif' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
-  titulo: { margin: 0, fontSize: '20px' },
-  carrito: { fontSize: '20px', fontWeight: '700', cursor: 'pointer' },
+  pagina: {
+    backgroundColor: '#0D0D0D',
+    minHeight: '100vh',
+    maxWidth: '480px',
+    margin: '0 auto',
+    fontFamily: 'sans-serif',
+    paddingBottom: '76px',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '20px 16px 16px',
+  },
+  headerLogo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  logoIcono: {
+    width: '44px',
+    height: '44px',
+    borderRadius: '50%',
+    backgroundColor: '#1A1A1A',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid #333',
+    flexShrink: 0,
+  },
+  restauranteNombre: {
+    margin: 0,
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#C8A84E',
+    fontFamily: 'Georgia, serif',
+    fontStyle: 'italic',
+  },
+  restauranteSubtitulo: {
+    margin: '2px 0 0',
+    fontSize: '12px',
+    color: '#C8A84E',
+    fontFamily: 'Georgia, serif',
+    fontStyle: 'italic',
+    opacity: 0.75,
+  },
+  mesaBadge: {
+    backgroundColor: '#1A1A1A',
+    border: '1px solid #333',
+    borderRadius: '8px',
+    padding: '4px 10px',
+  },
+  mesaBadgeTexto: {
+    fontSize: '12px',
+    color: '#999',
+    fontWeight: '600',
+  },
   bannerSoloLectura: {
-    display: 'flex', alignItems: 'flex-start', gap: '10px',
-    backgroundColor: '#fff3e0', border: '1px solid #f57c00',
-    borderRadius: '10px', padding: '12px 14px', marginBottom: '14px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+    backgroundColor: 'rgba(139,26,26,0.12)',
+    border: '1px solid rgba(139,26,26,0.4)',
+    borderRadius: '10px',
+    padding: '12px 14px',
+    margin: '0 16px 12px',
   },
-  bannerIcono: { fontSize: '22px', flexShrink: 0 },
-  bannerTitulo: { margin: 0, fontSize: '14px', fontWeight: '700', color: '#e65100' },
-  bannerSub: { margin: '2px 0 0', fontSize: '12px', color: '#bf360c' },
-  filtros: { display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px' },
-  filtroBtn: {
-    padding: '8px 16px', borderRadius: '20px',
-    border: '2px solid #2e7d32', backgroundColor: '#fff',
-    color: '#2e7d32', cursor: 'pointer', fontWeight: '600', whiteSpace: 'nowrap',
-  },
-  filtroActivo: { backgroundColor: '#2e7d32', color: '#fff' },
-  grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
-  mensaje: { textAlign: 'center', marginTop: '40px', fontSize: '16px' },
+  bannerTitulo: { margin: 0, fontSize: '14px', fontWeight: '700', color: '#e57373' },
+  bannerSub: { margin: '2px 0 0', fontSize: '12px', color: '#ffcdd2' },
   busquedaContainer: {
-  display: 'flex', alignItems: 'center',
-  backgroundColor: '#f5f5f5',
-  borderRadius: '12px', padding: '10px 14px',
-  marginBottom: '12px', gap: '8px',
-  border: '1px solid #e0e0e0',
-},
-busquedaIcono: { fontSize: '16px', color: '#888' },
-busquedaInput: {
-  flex: 1, border: 'none', background: 'transparent',
-  fontSize: '15px', outline: 'none', color: '#333',
-},
-busquedaLimpiar: {
-  background: 'none', border: 'none',
-  color: '#888', cursor: 'pointer',
-  fontSize: '14px', padding: '0',
-},
+    display: 'flex',
+    alignItems: 'center',
+    backgroundColor: '#2A2A2A',
+    borderRadius: '12px',
+    padding: '12px 14px',
+    margin: '0 16px 12px',
+    gap: '10px',
+  },
+  busquedaInput: {
+    flex: 1,
+    border: 'none',
+    background: 'transparent',
+    fontSize: '15px',
+    outline: 'none',
+    color: '#FFFFFF',
+  },
+  busquedaLimpiar: {
+    background: 'none',
+    border: 'none',
+    color: '#666',
+    cursor: 'pointer',
+    fontSize: '14px',
+    padding: 0,
+  },
+  filtros: {
+    display: 'flex',
+    gap: '8px',
+    overflowX: 'auto',
+    marginBottom: '16px',
+    padding: '4px 16px 6px',
+    scrollbarWidth: 'none',
+    alignItems: 'center',
+  },
+  filtroActivo: {
+    padding: '8px 18px',
+    borderRadius: '25px',
+    border: 'none',
+    backgroundColor: '#8B1A1A',
+    color: '#FFFFFF',
+    cursor: 'pointer',
+    fontWeight: '700',
+    whiteSpace: 'nowrap',
+    fontSize: '13px',
+    flexShrink: 0,
+    fontFamily: 'sans-serif',
+  },
+  lista: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    padding: '0 16px',
+  },
+  sinResultados: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: '40px',
+    fontSize: '15px',
+  },
+  bottomNav: {
+    position: 'fixed',
+    bottom: 0,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '100%',
+    maxWidth: '480px',
+    height: '60px',
+    backgroundColor: '#1A1A1A',
+    borderTop: '1px solid #333',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    zIndex: 50,
+  },
+  navItem: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '3px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '8px 0',
+    minHeight: '44px',
+    justifyContent: 'center',
+  },
+  navLabel: {
+    fontSize: '10px',
+    color: '#666',
+    fontWeight: '500',
+  },
+  navLabelActivo: { color: '#C8A84E' },
+  navCartWrapper: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navBadge: {
+    position: 'absolute',
+    top: '-6px',
+    right: '-8px',
+    backgroundColor: '#C8A84E',
+    color: '#0D0D0D',
+    borderRadius: '10px',
+    fontSize: '10px',
+    fontWeight: '700',
+    minWidth: '16px',
+    height: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0 3px',
+  },
 };
 
 export default MenuPage;

@@ -1,24 +1,37 @@
-// src/components/ProductDetailModal.jsx
-// Modal de detalle del producto con personalización de ingredientes y notas.
-// Se abre al tocar "Añadir" en el ProductCard.
-// Carga la receta del producto desde Supabase para mostrar los ingredientes como chips.
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../api/supabase';
 import useCartStore from '../store/useCartStore';
 
-const ProductDetailModal = ({ producto, onCerrar }) => {
-  // Estado local del modal
-  const [ingredientes, setIngredientes] = useState([]);
-  const [excluidos, setExcluidos] = useState([]);  // IDs de insumos excluidos
-  const [notas, setNotas] = useState('');
-  const [cantidad, setCantidad] = useState(1);
-  const [cargando, setCargando] = useState(true);
+const MODAL_CSS = `
+  @keyframes slideUpModal {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  @keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .modal-premium {
+    animation: slideUpModal 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .overlay-fade {
+    animation: fadeInOverlay 0.25s ease-out;
+  }
+  .chip-incluido:hover {
+    border-color: #B87333 !important;
+    border-width: 1.5px !important;
+  }
+`;
 
-  // Acción del store para agregar al carrito
+const ProductDetailModal = ({ producto, onCerrar }) => {
+  const [ingredientes, setIngredientes] = useState([]);
+  const [excluidos, setExcluidos]       = useState([]);
+  const [notas, setNotas]               = useState('');
+  const [cantidad, setCantidad]         = useState(1);
+  const [cargando, setCargando]         = useState(true);
+
   const { agregarItem, toggleExclusion, setNotas: setNotasStore } = useCartStore();
 
-  // ── Cargar ingredientes de la receta desde Supabase ──────────────────
   useEffect(() => {
     const cargarReceta = async () => {
       setCargando(true);
@@ -28,83 +41,73 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
         .eq('id_producto', producto.id_producto);
 
       if (!error && data) {
-        // Transformar los datos en un array limpio
-        const lista = data.map((r) => ({
-          id_insumo: r.id_insumo,
-          nombre: r.insumos.nombre,
+        setIngredientes(data.map((r) => ({
+          id_insumo:          r.id_insumo,
+          nombre:             r.insumos.nombre,
           cantidad_requerida: r.cantidad_requerida,
-          unidad_medida: r.insumos.unidad_medida,
-        }));
-        setIngredientes(lista);
+          unidad_medida:      r.insumos.unidad_medida,
+        })));
       }
       setCargando(false);
     };
-
     cargarReceta();
   }, [producto.id_producto]);
 
-  // ── Alternar exclusión de un ingrediente ─────────────────────────────
   const toggleIngrediente = (id_insumo) => {
     setExcluidos((prev) =>
-      prev.includes(id_insumo)
-        ? prev.filter((id) => id !== id_insumo)
-        : [...prev, id_insumo]
+      prev.includes(id_insumo) ? prev.filter((id) => id !== id_insumo) : [...prev, id_insumo]
     );
   };
 
-  // ── Confirmar y agregar al carrito ───────────────────────────────────
   const handleAgregar = () => {
-    // Agrega el producto N veces según la cantidad
-    for (let i = 0; i < cantidad; i++) {
-      agregarItem(producto);
-    }
+    for (let i = 0; i < cantidad; i++) agregarItem(producto);
 
-    // Registra las exclusiones seleccionadas
-    const exclusionesSeleccionadas = ingredientes.filter((ing) =>
-      excluidos.includes(ing.id_insumo)
-    );
-    exclusionesSeleccionadas.forEach((insumo) => {
-      toggleExclusion(producto.id_producto, insumo);
-    });
+    ingredientes
+      .filter((ing) => excluidos.includes(ing.id_insumo))
+      .forEach((insumo) => toggleExclusion(producto.id_producto, insumo));
 
-    // Guarda las notas si el comensal escribió algo
-    if (notas.trim()) {
-      setNotasStore(producto.id_producto, notas.trim());
-    }
-
+    if (notas.trim()) setNotasStore(producto.id_producto, notas.trim());
     onCerrar();
   };
 
-  // ── Formato de precio ────────────────────────────────────────────────
   const formatearPrecio = (valor) =>
-    new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-    }).format(valor);
+    '$' + new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(valor);
 
   return (
     <>
-      {/* Overlay oscuro */}
-      <div style={styles.overlay} onClick={onCerrar} />
+      <style>{MODAL_CSS}</style>
 
-      {/* Modal */}
-      <div style={styles.modal}>
-        {/* Botón cerrar */}
+      <div className="overlay-fade" style={styles.overlay} onClick={onCerrar} />
+
+      <div className="modal-premium" style={styles.modal}>
+
+        {/* Botón cerrar flotando sobre la imagen */}
         <button style={styles.btnCerrar} onClick={onCerrar}>✕</button>
 
-        {/* Imagen del producto */}
-        {producto.imagen_url && (
-          <img src={producto.imagen_url} alt={producto.nombre} style={styles.imagen} />
-        )}
+        {/* ── Hero: imagen con gradiente cinematográfico ── */}
+        <div style={styles.heroContainer}>
+          {producto.imagen_url ? (
+            <img src={producto.imagen_url} alt={producto.nombre} style={styles.heroImagen} />
+          ) : (
+            <div style={styles.heroPlaceholder} />
+          )}
+          <div style={styles.heroGradiente} />
+          <div style={styles.heroTexto}>
+            <h2 style={styles.nombre}>{producto.nombre}</h2>
+            <p style={styles.precio}>{formatearPrecio(producto.precio)}</p>
+          </div>
+        </div>
 
-        {/* Info del producto */}
+        {/* ── Contenido ── */}
         <div style={styles.contenido}>
-          <h2 style={styles.nombre}>{producto.nombre}</h2>
-          <p style={styles.precio}>{formatearPrecio(producto.precio)}</p>
-          <p style={styles.descripcion}>{producto.descripcion}</p>
 
-          {/* ── Sección de ingredientes ──────────────────────────────── */}
+          {producto.descripcion && (
+            <p style={styles.descripcion}>{producto.descripcion}</p>
+          )}
+
+          <div style={styles.divider} />
+
+          {/* Personalización */}
           <div style={styles.seccion}>
             <h3 style={styles.seccionTitulo}>Personaliza tu plato</h3>
             <p style={styles.seccionSub}>Toca un ingrediente para excluirlo</p>
@@ -120,16 +123,12 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
                   return (
                     <button
                       key={ing.id_insumo}
+                      className={estaExcluido ? undefined : 'chip-incluido'}
                       onClick={() => toggleIngrediente(ing.id_insumo)}
-                      style={{
-                        ...styles.chip,
-                        ...(estaExcluido ? styles.chipExcluido : styles.chipIncluido),
-                      }}
+                      style={{ ...styles.chip, ...(estaExcluido ? styles.chipExcluido : styles.chipIncluido) }}
                     >
                       <span style={styles.chipIcon}>{estaExcluido ? '✕' : '✓'}</span>
-                      <span style={estaExcluido ? styles.chipTextoExcluido : undefined}>
-                        {ing.nombre}
-                      </span>
+                      <span style={estaExcluido ? styles.chipTextoExcluido : undefined}>{ing.nombre}</span>
                     </button>
                   );
                 })}
@@ -137,9 +136,11 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
             )}
           </div>
 
-          {/* ── Campo de notas ───────────────────────────────────────── */}
+          <div style={styles.divider} />
+
+          {/* Notas */}
           <div style={styles.seccion}>
-            <h3 style={styles.seccionTitulo}>Notas para la cocina (opcional)</h3>
+            <h3 style={styles.seccionTitulo}>Notas para la cocina <span style={styles.opcional}>(opcional)</span></h3>
             <textarea
               style={styles.textarea}
               placeholder="Ej: Huevo bien cocido, sin picante..."
@@ -151,134 +152,217 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
             <p style={styles.charCount}>{notas.length}/200</p>
           </div>
 
-          {/* ── Selector de cantidad ─────────────────────────────────── */}
-          <div style={styles.seccion}>
-            <h3 style={styles.seccionTitulo}>Cantidad</h3>
-            <div style={styles.contador}>
-              <button
-                style={styles.btnContador}
-                onClick={() => setCantidad((c) => Math.max(1, c - 1))}
-              >
-                −
-              </button>
-              <span style={styles.cantidad}>{cantidad}</span>
-              <button
-                style={styles.btnContadorMas}
-                onClick={() => setCantidad((c) => c + 1)}
-              >
-                +
-              </button>
-            </div>
+          {/* Cantidad */}
+          <div style={styles.contadorWrapper}>
+            <button style={styles.btnContador} onClick={() => setCantidad((c) => Math.max(1, c - 1))}>−</button>
+            <span style={styles.cantidad}>{cantidad}</span>
+            <button style={{ ...styles.btnContador, ...styles.btnContadorMas }} onClick={() => setCantidad((c) => c + 1)}>+</button>
           </div>
 
-          {/* ── Botón de agregar ─────────────────────────────────────── */}
-          <button style={styles.btnAgregar} onClick={handleAgregar}>
+          {/* Botón agregar */}
+          <button className="btn-pedido" style={styles.btnAgregar} onClick={handleAgregar}>
             Añadir al pedido — {formatearPrecio(producto.precio * cantidad)}
           </button>
+
         </div>
       </div>
     </>
   );
 };
 
-// ── Estilos ────────────────────────────────────────────────────────────
 const styles = {
   overlay: {
-    position: 'fixed', inset: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.78)',
     zIndex: 200,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
   },
   modal: {
     position: 'fixed',
-    bottom: 0, left: '50%',
+    bottom: 0,
+    left: '50%',
     transform: 'translateX(-50%)',
     width: '100%',
-    maxWidth: '420px',
-    backgroundColor: '#fff',
+    maxWidth: '480px',
+    backgroundColor: '#1A1A1A',
     borderRadius: '20px 20px 0 0',
-    maxHeight: '85vh',
+    maxHeight: '92vh',
     overflowY: 'auto',
     zIndex: 201,
   },
+
+  /* Botón cerrar */
   btnCerrar: {
-    position: 'absolute', top: '12px', right: '12px',
-    background: 'rgba(0,0,0,0.5)', color: '#fff',
-    border: 'none', borderRadius: '50%',
-    width: '32px', height: '32px',
-    fontSize: '16px', cursor: 'pointer', zIndex: 202,
+    position: 'absolute',
+    top: '12px',
+    right: '12px',
+    background: 'rgba(0,0,0,0.5)',
+    backdropFilter: 'blur(4px)',
+    WebkitBackdropFilter: 'blur(4px)',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '50%',
+    width: '36px',
+    height: '36px',
+    fontSize: '16px',
+    cursor: 'pointer',
+    zIndex: 202,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  imagen: {
-    width: '100%', height: '200px',
-    objectFit: 'cover',
+
+  /* Hero */
+  heroContainer: {
+    position: 'relative',
+    width: '100%',
+    height: '280px',
+    overflow: 'hidden',
     borderRadius: '20px 20px 0 0',
+    flexShrink: 0,
   },
-  contenido: { padding: '16px 20px 24px' },
-  nombre: { margin: '0 0 4px', fontSize: '20px', fontWeight: '700' },
-  precio: { margin: '0 0 4px', fontSize: '18px', fontWeight: '700', color: '#2e7d32' },
-  descripcion: { margin: '0 0 16px', fontSize: '13px', color: '#666' },
-
-  // Secciones
-  seccion: {
-    borderTop: '1px solid #eee',
-    paddingTop: '12px', marginBottom: '12px',
+  heroImagen: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: 'block',
   },
-  seccionTitulo: { margin: '0 0 4px', fontSize: '14px', fontWeight: '600' },
-  seccionSub: { margin: '0 0 10px', fontSize: '12px', color: '#888' },
+  heroPlaceholder: {
+    width: '100%',
+    height: '100%',
+    background: 'radial-gradient(circle at 30% 40%, #2e1a0a 0%, #1A1A1A 70%)',
+  },
+  heroGradiente: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '180px',
+    background: 'linear-gradient(to bottom, transparent 0%, rgba(26,26,26,0.75) 50%, #1A1A1A 100%)',
+  },
+  heroTexto: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: '16px 20px 14px',
+  },
+  nombre: {
+    margin: '0 0 4px',
+    fontSize: '22px',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    lineHeight: '1.2',
+    textShadow: '0 1px 10px rgba(0,0,0,0.6)',
+  },
+  precio: {
+    margin: 0,
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#B87333',
+  },
 
-  // Chips de ingredientes
+  /* Contenido */
+  contenido: { padding: '16px 20px 36px' },
+  descripcion: { margin: '0', fontSize: '14px', color: '#999', lineHeight: '1.55' },
+  divider: { height: '1px', backgroundColor: '#333', margin: '14px 0' },
+  seccion: { marginBottom: '4px' },
+  seccionTitulo: { margin: '0 0 4px', fontSize: '15px', fontWeight: '500', color: '#FFFFFF' },
+  opcional: { fontSize: '13px', fontWeight: '400', color: '#666' },
+  seccionSub: { margin: '0 0 10px', fontSize: '12px', color: '#666' },
+
+  /* Chips */
   chips: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   chip: {
-    display: 'flex', alignItems: 'center', gap: '4px',
-    padding: '6px 14px', borderRadius: '20px',
-    fontSize: '13px', fontWeight: '500',
-    cursor: 'pointer', border: '1.5px solid',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '7px 14px',
+    borderRadius: '20px',
+    fontSize: '13px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    border: '1px solid',
     transition: 'all 0.2s',
+    minHeight: '34px',
   },
   chipIncluido: {
-    backgroundColor: '#e8f5e9', borderColor: '#2e7d32', color: '#2e7d32',
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(184,115,51,0.4)',
+    color: '#B87333',
   },
   chipExcluido: {
-    backgroundColor: '#ffeaea', borderColor: '#d32f2f', color: '#d32f2f',
+    backgroundColor: 'rgba(139,26,26,0.2)',
+    borderColor: '#8B1A1A',
+    color: '#ff6b6b',
   },
   chipIcon: { fontSize: '11px' },
   chipTextoExcluido: { textDecoration: 'line-through' },
 
-  // Notas
+  /* Notas */
   textarea: {
-    width: '100%', padding: '10px 12px',
-    border: '1px solid #ddd', borderRadius: '10px',
-    fontSize: '14px', fontFamily: 'inherit',
-    resize: 'none', backgroundColor: '#fafafa',
+    width: '100%',
+    padding: '12px',
+    border: '1px solid #333',
+    borderRadius: '10px',
+    fontSize: '14px',
+    fontFamily: 'inherit',
+    resize: 'none',
+    backgroundColor: '#2A2A2A',
+    color: '#FFFFFF',
     boxSizing: 'border-box',
   },
-  charCount: { textAlign: 'right', fontSize: '11px', color: '#aaa', margin: '4px 0 0' },
-  cargando: { fontSize: '13px', color: '#999' },
-  sinReceta: { fontSize: '13px', color: '#999', fontStyle: 'italic' },
+  charCount: { textAlign: 'right', fontSize: '11px', color: '#555', margin: '4px 0 0' },
+  cargando: { fontSize: '13px', color: '#666' },
+  sinReceta: { fontSize: '13px', color: '#666', fontStyle: 'italic' },
 
-  // Contador
-  contador: { display: 'flex', alignItems: 'center', gap: '16px' },
+  /* Cantidad */
+  contadorWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '20px',
+    margin: '16px 0',
+  },
   btnContador: {
-    width: '36px', height: '36px', borderRadius: '50%',
-    border: '2px solid #2e7d32', backgroundColor: '#fff',
-    color: '#2e7d32', fontSize: '20px', cursor: 'pointer', fontWeight: '700',
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    border: '1.5px solid #B87333',
+    backgroundColor: 'transparent',
+    color: '#B87333',
+    fontSize: '22px',
+    cursor: 'pointer',
+    fontWeight: '700',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: 1,
   },
   btnContadorMas: {
-    width: '36px', height: '36px', borderRadius: '50%',
-    border: 'none', backgroundColor: '#2e7d32',
-    color: '#fff', fontSize: '20px', cursor: 'pointer', fontWeight: '700',
+    backgroundColor: '#B87333',
+    color: '#000000',
+    border: 'none',
   },
-  cantidad: { fontSize: '20px', fontWeight: '700', minWidth: '24px', textAlign: 'center' },
+  cantidad: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    minWidth: '40px',
+    textAlign: 'center',
+  },
 
-  // Botón agregar
+  /* Botón agregar */
   btnAgregar: {
-    width: '100%', padding: '14px',
-    backgroundColor: '#2e7d32', color: '#fff',
-    border: 'none', borderRadius: '12px',
-    fontWeight: '700', fontSize: '16px',
-    cursor: 'pointer', marginTop: '8px',
+    width: '100%',
+    padding: '16px',
+    backgroundColor: '#B87333',
+    color: '#000000',
+    border: 'none',
+    borderRadius: '12px',
+    fontWeight: '700',
+    fontSize: '16px',
+    cursor: 'pointer',
   },
 };
 
