@@ -286,7 +286,7 @@ const OrderTrackingPage = () => {
         {pedido.estado_actual === 'Listo' && !cuentaSolicitada && (
           <div style={styles.acciones}>
             <button className="btn-cuenta" style={styles.btnCuenta} onClick={solicitarCuenta}>
-              💳 Solicitar la cuenta
+              Solicitar la cuenta
             </button>
             <button className="btn-agregar-mas" style={styles.btnAgregarMas} onClick={irAlMenu}>
               Pedir algo más
