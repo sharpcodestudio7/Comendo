@@ -32,6 +32,7 @@ const useMenu = () => {
             categorias ( nombre )
           `)
           .eq('disponible', true)
+          .eq('status_', 1)
           .order('nombre');
 
         if (errorProds) throw errorProds;

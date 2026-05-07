@@ -6,15 +6,16 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
 
 const MeserosCRUD = () => {
-  const [meseros, setMeseros]         = useState([]);
-  const [cargando, setCargando]       = useState(true);
-  const [mostrarForm, setMostrarForm] = useState(false);
-  const [guardando, setGuardando]     = useState(false);
-  const [error, setError]             = useState(null);
-  const [exito, setExito]             = useState(null);
-  const [nombre, setNombre]           = useState('');
+  const [meseros, setMeseros]               = useState([]);
+  const [cargando, setCargando]             = useState(true);
+  const [mostrarForm, setMostrarForm]       = useState(false);
+  const [guardando, setGuardando]           = useState(false);
+  const [error, setError]                   = useState(null);
+  const [exito, setExito]                   = useState(null);
+  const [nombre, setNombre]                 = useState('');
+  const [verDesactivados, setVerDesactivados] = useState(false);
 
-  useEffect(() => { cargarMeseros(); }, []);
+  useEffect(() => { cargarMeseros(); }, [verDesactivados]);
 
   const cargarMeseros = async () => {
     setCargando(true);
@@ -22,9 +23,15 @@ const MeserosCRUD = () => {
       .from('usuarios')
       .select('id_usuario, nombre')
       .eq('rol', 'Mesero')
+      .eq('status_', verDesactivados ? 0 : 1)
       .order('nombre');
     setMeseros(data || []);
     setCargando(false);
+  };
+
+  const reactivarMesero = async (id) => {
+    await supabase.from('usuarios').update({ status_: 1 }).eq('id_usuario', id);
+    await cargarMeseros();
   };
 
   const crearMesero = async (e) => {
@@ -55,7 +62,7 @@ const MeserosCRUD = () => {
   };
 
   const eliminarMesero = async (id) => {
-    await supabase.from('usuarios').delete().eq('id_usuario', id);
+    await supabase.from('usuarios').update({ status_: 0 }).eq('id_usuario', id);
     await cargarMeseros();
   };
 
@@ -63,12 +70,22 @@ const MeserosCRUD = () => {
     <div>
       <div style={styles.header}>
         <h2 style={styles.titulo}>🛎 Meseros</h2>
-        <button
-          style={styles.btnNuevo}
-          onClick={() => { setMostrarForm(!mostrarForm); setError(null); setExito(null); }}
-        >
-          {mostrarForm ? '✕ Cancelar' : '+ Nuevo Mesero'}
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            style={{ ...styles.btnToggleVista, ...(verDesactivados ? styles.btnToggleVistaActivo : {}) }}
+            onClick={() => { setVerDesactivados(!verDesactivados); setMostrarForm(false); }}
+          >
+            {verDesactivados ? '✅ Ver activos' : '🗂 Ver desactivados'}
+          </button>
+          {!verDesactivados && (
+            <button
+              style={styles.btnNuevo}
+              onClick={() => { setMostrarForm(!mostrarForm); setError(null); setExito(null); }}
+            >
+              {mostrarForm ? '✕ Cancelar' : '+ Nuevo Mesero'}
+            </button>
+          )}
+        </div>
       </div>
 
       {exito && <p style={styles.exito}>{exito}</p>}
@@ -105,7 +122,13 @@ const MeserosCRUD = () => {
       ) : (
         <div style={styles.grid}>
           {meseros.map((m) => (
-            <MeseroCard key={m.id_usuario} mesero={m} onEliminar={eliminarMesero} />
+            <MeseroCard
+              key={m.id_usuario}
+              mesero={m}
+              onEliminar={eliminarMesero}
+              onReactivar={reactivarMesero}
+              verDesactivados={verDesactivados}
+            />
           ))}
         </div>
       )}
@@ -113,7 +136,7 @@ const MeserosCRUD = () => {
   );
 };
 
-const MeseroCard = ({ mesero, onEliminar }) => {
+const MeseroCard = ({ mesero, onEliminar, onReactivar, verDesactivados }) => {
   const [stats, setStats] = useState({ hoy: 0, total: 0 });
 
   useEffect(() => {
@@ -159,9 +182,15 @@ const MeseroCard = ({ mesero, onEliminar }) => {
           <span style={styles.statLabel}>total</span>
         </div>
       </div>
-      <button style={styles.btnEliminar} onClick={() => onEliminar(mesero.id_usuario)} title="Eliminar">
-        🗑
-      </button>
+      {verDesactivados ? (
+        <button style={styles.btnReactivar} onClick={() => onReactivar(mesero.id_usuario)} title="Reactivar">
+          ♻️
+        </button>
+      ) : (
+        <button style={styles.btnEliminar} onClick={() => onEliminar(mesero.id_usuario)} title="Eliminar">
+          🗑
+        </button>
+      )}
     </div>
   );
 };
@@ -193,6 +222,9 @@ const styles = {
   statNum: { color: '#4CAF50', fontWeight: '700', fontSize: '18px' },
   statLabel: { color: '#888', fontSize: '11px' },
   btnEliminar: { background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', padding: '4px', color: '#666' },
+  btnReactivar: { background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', padding: '4px' },
+  btnToggleVista: { padding: '10px 16px', backgroundColor: '#37474f', color: '#ccc', border: '1px solid #555', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
+  btnToggleVistaActivo: { backgroundColor: '#1565C0', color: '#fff', border: '1px solid #1565C0' },
 };
 
 export default MeserosCRUD;

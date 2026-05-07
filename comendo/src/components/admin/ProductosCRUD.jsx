@@ -15,6 +15,7 @@ const ProductosCRUD = () => {
   const [imagenPreview, setImagenPreview] = useState(null);
   const [imagenArchivo, setImagenArchivo] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
+  const [verDesactivados, setVerDesactivados] = useState(false);
 
   const formVacio = { nombre: '', descripcion: '', precio: '', id_categoria: '', disponible: true };
   const [form, setForm] = useState(formVacio);
@@ -22,7 +23,7 @@ const ProductosCRUD = () => {
   const cargarDatos = async () => {
     setCargando(true);
     const [{ data: prods, error: errorProds }, { data: cats }] = await Promise.all([
-      supabase.from('productos').select('*, categorias(nombre)').order('nombre'),
+      supabase.from('productos').select('*, categorias(nombre)').eq('status_', verDesactivados ? 0 : 1).order('nombre'),
       supabase.from('categorias').select('*').order('nombre'),
     ]);
     console.log('Productos:', prods);
@@ -34,7 +35,12 @@ const ProductosCRUD = () => {
 
   useEffect(() => {
     cargarDatos();
-  }, []);
+  }, [verDesactivados]);
+
+  const reactivarProducto = async (productoId) => {
+    await supabase.from('productos').update({ status_: 1 }).eq('id_producto', productoId);
+    await cargarDatos();
+  };
 
   const abrirCrear = () => {
     setProductoEditando(null);
@@ -120,12 +126,7 @@ const ProductosCRUD = () => {
   const handleEliminar = (productoId) => setModalEliminar(productoId);
 
   const confirmarEliminar = async () => {
-    await supabase.storage.from('productos').remove([
-      `${modalEliminar}.jpg`,
-      `${modalEliminar}.png`,
-      `${modalEliminar}.webp`
-    ]);
-    await supabase.from('productos').delete().eq('id_producto', modalEliminar);
+    await supabase.from('productos').update({ status_: 0 }).eq('id_producto', modalEliminar);
     setModalEliminar(null);
     await cargarDatos();
   };
@@ -150,9 +151,17 @@ const ProductosCRUD = () => {
           <button style={styles.btnExportar} onClick={() => exportarProductos(productos)}>
             ⬇ Exportar Excel
           </button>
-          <button style={styles.btnCrear} onClick={abrirCrear}>
-            + Nuevo Producto
+          <button
+            style={{ ...styles.btnToggleVista, ...(verDesactivados ? styles.btnToggleVistaActivo : {}) }}
+            onClick={() => setVerDesactivados(!verDesactivados)}
+          >
+            {verDesactivados ? '✅ Ver activos' : '🗂 Ver desactivados'}
           </button>
+          {!verDesactivados && (
+            <button style={styles.btnCrear} onClick={abrirCrear}>
+              + Nuevo Producto
+            </button>
+          )}
         </div>
       </div>
 
@@ -175,14 +184,22 @@ const ProductosCRUD = () => {
                 </div>
               </div>
               <div style={styles.filaAcciones}>
-                <button
-                  style={{ ...styles.btnToggle, backgroundColor: producto.disponible ? '#2D6A4F' : '#555' }}
-                  onClick={() => toggleDisponible(producto)}
-                >
-                  {producto.disponible ? '✅ Disponible' : '❌ Oculto'}
-                </button>
-                <button style={styles.btnEditar} onClick={() => abrirEditar(producto)}>✏️ Editar</button>
-                <button style={styles.btnEliminar} onClick={() => handleEliminar(producto.id_producto)}>🗑 Eliminar</button>
+                {verDesactivados ? (
+                  <button style={styles.btnReactivar} onClick={() => reactivarProducto(producto.id_producto)}>
+                    ♻️ Reactivar
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      style={{ ...styles.btnToggle, backgroundColor: producto.disponible ? '#2D6A4F' : '#555' }}
+                      onClick={() => toggleDisponible(producto)}
+                    >
+                      {producto.disponible ? '✅ Disponible' : '❌ Oculto'}
+                    </button>
+                    <button style={styles.btnEditar} onClick={() => abrirEditar(producto)}>✏️ Editar</button>
+                    <button style={styles.btnEliminar} onClick={() => handleEliminar(producto.id_producto)}>🗑 Eliminar</button>
+                  </>
+                )}
               </div>
             </div>
           ))
@@ -269,8 +286,8 @@ const ProductosCRUD = () => {
       {/* ✅ Modal eliminar DENTRO del return */}
       {modalEliminar && (
         <ModalConfirm
-          titulo="Eliminar Producto"
-          mensaje="¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer."
+          titulo="Desactivar Producto"
+          mensaje="¿Desactivar este producto? Dejará de aparecer en el sistema pero sus datos se conservan."
           labelConfirmar="Eliminar"
           colorConfirmar="#E53935"
           onConfirmar={confirmarEliminar}
@@ -300,6 +317,9 @@ const styles = {
   btnToggle: { padding: '8px 12px', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
   btnEditar: { padding: '8px 12px', backgroundColor: '#F57C00', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
   btnEliminar: { padding: '8px 12px', backgroundColor: '#E53935', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  btnReactivar: { padding: '8px 12px', backgroundColor: '#1565C0', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  btnToggleVista: { padding: '10px 16px', backgroundColor: '#37474f', color: '#ccc', border: '1px solid #555', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
+  btnToggleVistaActivo: { backgroundColor: '#1565C0', color: '#fff', border: '1px solid #1565C0' },
   overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100 },
   modal: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#16213e', borderRadius: '16px', padding: '32px', width: '90%', maxWidth: '480px', zIndex: 101, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', maxHeight: '90vh', overflowY: 'auto' },
   modalTitulo: { margin: '0 0 24px', color: '#fff', fontSize: '20px' },

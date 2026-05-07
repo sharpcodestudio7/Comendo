@@ -14,7 +14,8 @@ export const asignarMeseroAutomatico = async (pedidoId) => {
   const { data: meseros } = await supabase
     .from('usuarios')
     .select('id_usuario, nombre, email')
-    .eq('rol', 'Mesero');
+    .eq('rol', 'Mesero')
+    .eq('status_', 1);
 
   if (!meseros || meseros.length === 0) return null;
 

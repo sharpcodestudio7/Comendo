@@ -7,11 +7,10 @@ import { useState } from 'react';
 import useCartStore from '../store/useCartStore';
 import ProductDetailModal from './ProductDetailModal';
 
-const ProductCard = ({ producto }) => {
+const ProductCard = ({ producto, soloLectura = false }) => {
   const { items, agregarItem, quitarItem } = useCartStore();
   const [modalAbierto, setModalAbierto] = useState(false);
 
-  // Busca si este producto ya está en el carrito
   const itemEnCarrito = items.find((i) => i.producto.id_producto === producto.id_producto);
   const cantidad = itemEnCarrito ? itemEnCarrito.cantidad : 0;
 
@@ -39,13 +38,15 @@ const ProductCard = ({ producto }) => {
 
         {/* Control de cantidad */}
         <div style={styles.controles}>
-          {cantidad === 0 ? (
-            // Primera vez: abre el modal para personalizar
+          {soloLectura ? (
+            <button style={styles.btnSoloLectura} disabled>
+              🔒 Solo vista
+            </button>
+          ) : cantidad === 0 ? (
             <button style={styles.btnAnadir} onClick={() => setModalAbierto(true)}>
               + Añadir
             </button>
           ) : (
-            // Ya está en el carrito: controles rápidos de cantidad
             <div style={styles.contador}>
               <button style={styles.btnContador} onClick={() => quitarItem(producto.id_producto)}>−</button>
               <span style={styles.cantidad}>{cantidad}</span>
@@ -98,6 +99,17 @@ const styles = {
     cursor: 'pointer',
     fontWeight: '700',
     fontSize: '14px',
+  },
+  btnSoloLectura: {
+    width: '100%',
+    padding: '10px',
+    backgroundColor: '#f5f5f5',
+    color: '#999',
+    border: '1px solid #e0e0e0',
+    borderRadius: '8px',
+    cursor: 'not-allowed',
+    fontWeight: '600',
+    fontSize: '13px',
   },
   contador: {
     display: 'flex',

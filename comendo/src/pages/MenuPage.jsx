@@ -4,20 +4,24 @@ import { useParams } from 'react-router-dom';
 import useMenu from '../hooks/useMenu';
 import useCartStore from '../store/useCartStore';
 import useActivePedido from '../hooks/useActivePedido';
+import useSesionMesa from '../hooks/useSesionMesa';
 import ProductCard from '../components/ProductCard';
 import CartDrawer from '../components/CartDrawer';
 import SkeletonCard from '../components/SkeletonCard';
 
 const MenuPage = () => {
-  // ✅ useParams DENTRO del componente, junto a los demás hooks
   const { mesaId } = useParams();
 
   const { categorias, productos, cargando, error } = useMenu();
   const { pedidoActivo, refrescar: refrescarPedido } = useActivePedido(mesaId);
+  const { esDueno, cargando: cargandoSesion } = useSesionMesa(mesaId);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [carritoAbierto, setCarritoAbierto] = useState(false);
   const totalItems = useCartStore((s) => s.totalItems());
   const [busqueda, setBusqueda] = useState('');
+
+  // Solo bloquea si hay mesaId y la sesión ya fue resuelta
+  const soloLectura = !!mesaId && !cargandoSesion && !esDueno;
 
   const productosFiltrados =
   productos.filter((p) => {
@@ -60,11 +64,26 @@ const MenuPage = () => {
     <div style={styles.pagina}>
       <header style={styles.header}>
         <h1 style={styles.titulo}>🍽 Mr. Arroz Paisa</h1>
-   
-        <div style={styles.carrito} onClick={() => setCarritoAbierto(true)}>
-          🛒 <span>{totalItems}</span>
-        </div>
+
+        {!soloLectura && (
+          <div style={styles.carrito} onClick={() => setCarritoAbierto(true)}>
+            🛒 <span>{totalItems}</span>
+          </div>
+        )}
       </header>
+
+      {soloLectura && (
+        <div style={styles.bannerSoloLectura}>
+          <span style={styles.bannerIcono}>🔒</span>
+          <div>
+            <p style={styles.bannerTitulo}>Mesa con sesión activa</p>
+            <p style={styles.bannerSub}>
+              Otro dispositivo ya está realizando el pedido. Solo puedes ver el menú.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Barra de búsqueda */}
       <div style={styles.busquedaContainer}>
         <span style={styles.busquedaIcono}>🔍</span>
@@ -101,17 +120,23 @@ const MenuPage = () => {
 
       <div style={styles.grid}>
         {productosFiltrados.map((producto) => (
-          <ProductCard key={producto.id_producto} producto={producto} />
+          <ProductCard
+            key={producto.id_producto}
+            producto={producto}
+            soloLectura={soloLectura || cargandoSesion}
+          />
         ))}
       </div>
 
-      <CartDrawer
-        abierto={carritoAbierto}
-        onCerrar={() => setCarritoAbierto(false)}
-        mesaId={mesaId}
-        pedidoActivo={pedidoActivo}
-        onPedidoCreado={refrescarPedido}
-      />
+      {!soloLectura && (
+        <CartDrawer
+          abierto={carritoAbierto}
+          onCerrar={() => setCarritoAbierto(false)}
+          mesaId={mesaId}
+          pedidoActivo={pedidoActivo}
+          onPedidoCreado={refrescarPedido}
+        />
+      )}
     </div>
   );
 };
@@ -121,6 +146,14 @@ const styles = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
   titulo: { margin: 0, fontSize: '20px' },
   carrito: { fontSize: '20px', fontWeight: '700', cursor: 'pointer' },
+  bannerSoloLectura: {
+    display: 'flex', alignItems: 'flex-start', gap: '10px',
+    backgroundColor: '#fff3e0', border: '1px solid #f57c00',
+    borderRadius: '10px', padding: '12px 14px', marginBottom: '14px',
+  },
+  bannerIcono: { fontSize: '22px', flexShrink: 0 },
+  bannerTitulo: { margin: 0, fontSize: '14px', fontWeight: '700', color: '#e65100' },
+  bannerSub: { margin: '2px 0 0', fontSize: '12px', color: '#bf360c' },
   filtros: { display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px' },
   filtroBtn: {
     padding: '8px 16px', borderRadius: '20px',

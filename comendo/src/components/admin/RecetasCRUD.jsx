@@ -21,8 +21,8 @@ const RecetasCRUD = () => {
   const cargarDatos = async () => {
     setCargando(true);
     const [{ data: prods }, { data: ins }, { data: recs }] = await Promise.all([
-      supabase.from('productos').select('id_producto, nombre').order('nombre'),
-      supabase.from('insumos').select('id_insumo, nombre, unidad_medida').order('nombre'),
+      supabase.from('productos').select('id_producto, nombre').eq('status_', 1).order('nombre'),
+      supabase.from('insumos').select('id_insumo, nombre, unidad_medida').eq('status_', 1).order('nombre'),
       supabase.from('recetas').select(`
         id_producto,
         id_insumo,

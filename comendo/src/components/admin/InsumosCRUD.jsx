@@ -14,20 +14,26 @@ const InsumosCRUD = () => {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
+  const [verDesactivados, setVerDesactivados] = useState(false);
 
   const formVacio = { nombre: '', cantidad_stock: '', unidad_medida: 'Gramos' };
   const [form, setForm] = useState(formVacio);
 
   const cargarInsumos = async () => {
     setCargando(true);
-    const { data } = await supabase.from('insumos').select('*').order('nombre');
+    const { data } = await supabase.from('insumos').select('*').eq('status_', verDesactivados ? 0 : 1).order('nombre');
     setInsumos(data || []);
     setCargando(false);
   };
 
   useEffect(() => {
     cargarInsumos();
-  }, []);
+  }, [verDesactivados]);
+
+  const reactivarInsumo = async (insumoId) => {
+    await supabase.from('insumos').update({ status_: 1 }).eq('id_insumo', insumoId);
+    await cargarInsumos();
+  };
 
   const abrirCrear = () => {
     setInsumoEditando(null);
@@ -77,8 +83,7 @@ const InsumosCRUD = () => {
   const handleEliminar = (insumoId) => setModalEliminar(insumoId);
 
   const confirmarEliminar = async () => {
-    await supabase.from('recetas').delete().eq('id_insumo', modalEliminar);
-    await supabase.from('insumos').delete().eq('id_insumo', modalEliminar);
+    await supabase.from('insumos').update({ status_: 0 }).eq('id_insumo', modalEliminar);
     setModalEliminar(null);
     await cargarInsumos();
   };
@@ -101,9 +106,17 @@ const InsumosCRUD = () => {
           <button style={styles.btnExportar} onClick={() => exportarInsumos(insumos)}>
             ⬇ Exportar Excel
           </button>
-          <button style={styles.btnCrear} onClick={abrirCrear}>
-            + Nuevo Insumo
+          <button
+            style={{ ...styles.btnToggleVista, ...(verDesactivados ? styles.btnToggleVistaActivo : {}) }}
+            onClick={() => setVerDesactivados(!verDesactivados)}
+          >
+            {verDesactivados ? '✅ Ver activos' : '🗂 Ver desactivados'}
           </button>
+          {!verDesactivados && (
+            <button style={styles.btnCrear} onClick={abrirCrear}>
+              + Nuevo Insumo
+            </button>
+          )}
         </div>
       </div>
 
@@ -136,8 +149,16 @@ const InsumosCRUD = () => {
                 </div>
               </div>
               <div style={styles.filaAcciones}>
-                <button style={styles.btnEditar} onClick={() => abrirEditar(insumo)}>✏️ Editar</button>
-                <button style={styles.btnEliminar} onClick={() => handleEliminar(insumo.id_insumo)}>🗑 Eliminar</button>
+                {verDesactivados ? (
+                  <button style={styles.btnReactivar} onClick={() => reactivarInsumo(insumo.id_insumo)}>
+                    ♻️ Reactivar
+                  </button>
+                ) : (
+                  <>
+                    <button style={styles.btnEditar} onClick={() => abrirEditar(insumo)}>✏️ Editar</button>
+                    <button style={styles.btnEliminar} onClick={() => handleEliminar(insumo.id_insumo)}>🗑 Eliminar</button>
+                  </>
+                )}
               </div>
             </div>
           ))
@@ -194,8 +215,8 @@ const InsumosCRUD = () => {
       {/* ✅ Modal eliminar DENTRO del return */}
       {modalEliminar && (
         <ModalConfirm
-          titulo="Eliminar Insumo"
-          mensaje="¿Eliminar este insumo? También se eliminarán sus recetas asociadas."
+          titulo="Desactivar Insumo"
+          mensaje="¿Desactivar este insumo? Dejará de aparecer en el sistema pero sus datos se conservan."
           labelConfirmar="Eliminar"
           colorConfirmar="#E53935"
           onConfirmar={confirmarEliminar}
@@ -223,6 +244,9 @@ const styles = {
   filaAcciones: { display: 'flex', gap: '8px' },
   btnEditar: { padding: '8px 12px', backgroundColor: '#F57C00', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
   btnEliminar: { padding: '8px 12px', backgroundColor: '#E53935', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  btnReactivar: { padding: '8px 12px', backgroundColor: '#1565C0', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  btnToggleVista: { padding: '10px 16px', backgroundColor: '#37474f', color: '#ccc', border: '1px solid #555', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
+  btnToggleVistaActivo: { backgroundColor: '#1565C0', color: '#fff', border: '1px solid #1565C0' },
   overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100 },
   modal: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#16213e', borderRadius: '16px', padding: '32px', width: '90%', maxWidth: '480px', zIndex: 101, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' },
   modalTitulo: { margin: '0 0 24px', color: '#fff', fontSize: '20px' },
