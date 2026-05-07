@@ -1,5 +1,6 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
 import MenuPage from './pages/MenuPage';
 import OrderTrackingPage from './pages/OrderTrackingPage';
 import KDSPage from './pages/KDSPage';
@@ -14,7 +15,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Módulo 1 — Comensal */}
-        <Route path="/mesa/:mesaId" element={<MenuPage />} />
+        <Route path="/mesa/:mesaId" element={<LandingPage />} />
+        <Route path="/mesa/:mesaId/menu" element={<MenuPage />} />
         <Route path="/" element={<MenuPage />} />
         <Route path="/pedido/:pedidoId" element={<OrderTrackingPage />} />
 
