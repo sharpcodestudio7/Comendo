@@ -53,14 +53,30 @@ const TRACKING_CSS = `
     background: linear-gradient(to bottom, #B87333, #D4922A) !important;
     transition: height 0.8s ease;
   }
+  .btn-cuenta {
+    transition: all 0.3s ease;
+  }
   .btn-cuenta:hover {
     background-color: #D4922A !important;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(184, 115, 51, 0.4);
-    transition: all 0.3s ease;
   }
   .btn-cuenta:active {
     transform: translateY(0);
+  }
+  @keyframes fadeInOverlayGracias {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.85); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .overlay-gracias {
+    animation: fadeInOverlayGracias 0.4s ease-out;
+  }
+  .modal-confirmar {
+    animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 `;
 
@@ -92,6 +108,9 @@ const OrderTrackingPage = () => {
   const [cargando, setCargando]               = useState(true);
   const [error, setError]                     = useState(null);
   const [cuentaSolicitada, setCuentaSolicitada] = useState(false);
+  const [modalConfirm, setModalConfirm]         = useState(false);
+  const [gracias, setGracias]                   = useState(false);
+  const [procesando, setProcesando]             = useState(false);
 
   useEffect(() => {
     document.body.style.backgroundColor = '#0D0D0D';
@@ -166,10 +185,36 @@ const OrderTrackingPage = () => {
     return () => supabase.removeChannel(canal);
   }, [pedidoId]);
 
-  const solicitarCuenta = async () => {
-    if (!pedido?.id_mesa) return;
-    await supabase.from('mesas').update({ estado: 'Por_Pagar' }).eq('id_mesa', pedido.id_mesa);
+  const solicitarCuenta = () => setModalConfirm(true);
+
+  const confirmarCuenta = async () => {
+    if (procesando) return;
+    setProcesando(true);
+    setModalConfirm(false);
+
+    const idMesa = pedido?.id_mesa;
+
+    await supabase
+      .from('pedidos')
+      .update({ estado_actual: 'Pagado' })
+      .eq('id_pedido', pedidoId);
+
+    if (idMesa) {
+      await supabase
+        .from('mesas')
+        .update({ estado: 'Libre', token_sesion_actual: null })
+        .eq('id_mesa', idMesa);
+
+      localStorage.removeItem(`comendo_session_${idMesa}`);
+    }
+
     setCuentaSolicitada(true);
+    setGracias(true);
+
+    setTimeout(() => {
+      if (idMesa) navigate(`/mesa/${idMesa}`);
+      else navigate('/');
+    }, 2500);
   };
 
   const irAlMenu = () => pedido.id_mesa ? navigate(`/mesa/${pedido.id_mesa}`) : navigate('/');
@@ -191,6 +236,41 @@ const OrderTrackingPage = () => {
   return (
     <>
       <style>{TRACKING_CSS}</style>
+
+      {/* ── Overlay de agradecimiento ── */}
+      {gracias && (
+        <div className="overlay-gracias" style={styles.overlayGracias}>
+          <div style={styles.graciasCirulo}>
+            <span style={{ fontSize: '48px', lineHeight: 1 }}>✓</span>
+          </div>
+          <h2 style={styles.graciasTitulo}>¡Gracias por tu visita!</h2>
+          <p style={styles.graciasSubtexto}>Esperamos verte pronto en Mr. Arroz Paisa</p>
+        </div>
+      )}
+
+      {/* ── Modal de confirmación ── */}
+      {modalConfirm && (
+        <>
+          <div style={styles.modalOverlay} onClick={() => setModalConfirm(false)} />
+          <div className="modal-confirmar" style={styles.modalContenedor}>
+            <p style={styles.modalTitulo}>¿Deseas solicitar la cuenta?</p>
+            <p style={styles.modalSubtexto}>Se cerrará tu sesión en esta mesa</p>
+            <button
+              style={styles.modalBtnConfirmar}
+              onClick={confirmarCuenta}
+              disabled={procesando}
+            >
+              Sí, solicitar cuenta
+            </button>
+            <button
+              style={styles.modalBtnCancelar}
+              onClick={() => setModalConfirm(false)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </>
+      )}
 
       <div className="tracking-container" style={styles.pagina}>
 
@@ -515,6 +595,104 @@ const styles = {
     textAlign: 'center',
     boxSizing: 'border-box',
     marginTop: '0',
+  },
+
+  // Overlay de agradecimiento
+  overlayGracias: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 300,
+    backgroundColor: '#0D0D0D',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '16px',
+    padding: '24px',
+    textAlign: 'center',
+  },
+  graciasCirulo: {
+    width: '96px',
+    height: '96px',
+    borderRadius: '50%',
+    backgroundColor: '#B87333',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#000',
+    fontWeight: 700,
+    marginBottom: '8px',
+  },
+  graciasTitulo: {
+    margin: 0,
+    fontSize: '24px',
+    fontWeight: 700,
+    color: '#FFFFFF',
+  },
+  graciasSubtexto: {
+    margin: 0,
+    fontSize: '15px',
+    color: '#999999',
+    maxWidth: '280px',
+    lineHeight: 1.5,
+  },
+
+  // Modal de confirmación
+  modalOverlay: {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    zIndex: 200,
+  },
+  modalContenedor: {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    zIndex: 201,
+    backgroundColor: '#1A1A1A',
+    borderRadius: '16px',
+    padding: '24px',
+    width: 'min(320px, 90vw)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    fontFamily: 'sans-serif',
+  },
+  modalTitulo: {
+    margin: '0 0 4px',
+    fontSize: '18px',
+    fontWeight: 700,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  modalSubtexto: {
+    margin: '0 0 8px',
+    fontSize: '14px',
+    color: '#999999',
+    textAlign: 'center',
+  },
+  modalBtnConfirmar: {
+    width: '100%',
+    padding: '14px',
+    backgroundColor: '#B87333',
+    color: '#000000',
+    border: 'none',
+    borderRadius: '10px',
+    fontWeight: 700,
+    fontSize: '15px',
+    cursor: 'pointer',
+  },
+  modalBtnCancelar: {
+    width: '100%',
+    padding: '13px',
+    backgroundColor: 'transparent',
+    color: '#999999',
+    border: '1px solid #333',
+    borderRadius: '10px',
+    fontWeight: 500,
+    fontSize: '15px',
+    cursor: 'pointer',
   },
 
   // Cuenta solicitada
