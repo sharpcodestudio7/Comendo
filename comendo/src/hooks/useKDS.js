@@ -21,9 +21,6 @@ const useKDS = () => {
         id_pedido,
         estado_actual,
         fecha_creacion,
-        fecha_listo,
-        id_mesero,
-        mesero:usuarios!pedidos_id_mesero_fkey ( nombre ),
         mesas ( numero ),
         detalle_pedidos (
           id_detalle,
@@ -48,11 +45,8 @@ const useKDS = () => {
       const ahora = new Date();
       const pedidosFiltrados = data.filter((p) => {
         if (p.estado_actual !== 'Listo') return true;
-        const fechaReferencia = p.fecha_listo
-          ? new Date(p.fecha_listo)
-          : new Date(p.fecha_creacion);
-        const minutosEnListo = (ahora - fechaReferencia) / 60000;
-        return minutosEnListo < MINUTOS_VISIBLE_LISTO;
+        const minutosDesdeCreacion = (ahora - new Date(p.fecha_creacion)) / 60000;
+        return minutosDesdeCreacion < MINUTOS_VISIBLE_LISTO;
       });
       setPedidos(pedidosFiltrados);
     }
@@ -86,9 +80,7 @@ const useKDS = () => {
                     ? {
                         ...p,
                         estado_actual: estadoNuevo,
-                        fecha_listo: estadoNuevo === 'Listo'
-                          ? new Date().toISOString()
-                          : p.fecha_listo,
+                        ...(estadoNuevo === 'Listo' && { fecha_listo_local: new Date().toISOString() }),
                       }
                     : p
                 )
@@ -113,8 +105,8 @@ const useKDS = () => {
       setPedidos((prev) =>
         prev.filter((p) => {
           if (p.estado_actual !== 'Listo') return true;
-          const fechaReferencia = p.fecha_listo
-            ? new Date(p.fecha_listo)
+          const fechaReferencia = p.fecha_listo_local
+            ? new Date(p.fecha_listo_local)
             : new Date(p.fecha_creacion);
           const minutosEnListo = (ahora - fechaReferencia) / 60000;
           return minutosEnListo < MINUTOS_VISIBLE_LISTO;
