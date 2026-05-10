@@ -5,9 +5,9 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
 const TIPOS = {
-  Entrada: { color: '#2D6A4F', bg: '#F0F7F4', emoji: '📥' },
-  Salida:  { color: '#E53935', bg: '#FFF5F5', emoji: '📤' },
-  Ajuste:  { color: '#F57C00', bg: '#FFF8F0', emoji: '🔧' },
+  Entrada: { color: '#1B5E20', bg: 'rgba(27,94,32,0.2)', emoji: '📥' },
+  Salida:  { color: '#8B1A1A', bg: 'rgba(139,26,26,0.2)', emoji: '📤' },
+  Ajuste:  { color: '#7B5B00', bg: 'rgba(123,91,0,0.2)', emoji: '🔧' },
 };
 
 const MovimientosInventario = () => {
@@ -196,7 +196,7 @@ const MovimientosInventario = () => {
                   <span style={styles.motivo}>{m.motivo}</span>
                 </div>
                 <div style={styles.cantidades}>
-                  <span style={styles.cantidadLabel}>
+                  <span style={{ ...styles.cantidadLabel, color: m.tipo === 'Entrada' ? '#4CAF50' : m.tipo === 'Salida' ? '#ff6b6b' : '#B87333' }}>
                     {m.tipo === 'Entrada' ? '+' : m.tipo === 'Salida' ? '-' : '→'}
                     {formatCOP(m.cantidad)} {m.insumos?.unidad_medida}
                   </span>
@@ -246,8 +246,8 @@ const MovimientosInventario = () => {
                       key={tipo}
                       style={{
                         ...styles.tipoBtnSelector,
-                        backgroundColor: form.tipo === tipo ? TIPOS[tipo].color : '#0f3460',
-                        border: form.tipo === tipo ? `2px solid ${TIPOS[tipo].color}` : '2px solid #0f3460',
+                        backgroundColor: form.tipo === tipo ? TIPOS[tipo].color : '#2A2A2A',
+                        border: form.tipo === tipo ? `2px solid ${TIPOS[tipo].color}` : '2px solid #333',
                       }}
                       onClick={() => setForm({ ...form, tipo })}
                     >
@@ -313,36 +313,36 @@ const MovimientosInventario = () => {
 };
 
 const styles = {
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
-  titulo: { margin: 0, color: '#fff', fontSize: '22px' },
-  btnCrear: { padding: '10px 20px', backgroundColor: '#2D6A4F', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' },
-  btnExportar: { padding: '10px 20px', backgroundColor: '#1565C0', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' },
+  titulo: { margin: 0, color: '#FFFFFF', fontSize: '20px', fontWeight: '700' },
+  btnCrear: { padding: '10px 20px', backgroundColor: '#B87333', color: '#000000', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' },
+  btnExportar: { padding: '10px 20px', backgroundColor: 'transparent', color: '#B87333', border: '1px solid #B87333', borderRadius: '10px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
   filtros: { display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap' },
-  filtroSelect: { padding: '10px 14px', backgroundColor: '#16213e', border: '1px solid #2D6A4F', borderRadius: '8px', color: '#fff', fontSize: '14px', cursor: 'pointer' },
-  totalRegistros: { color: '#888', fontSize: '13px', marginLeft: 'auto' },
-  tabla: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  fila: { backgroundColor: '#16213e', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' },
-  tipoBadge: { padding: '6px 12px', borderRadius: '20px', color: '#fff', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' },
+  filtroSelect: { padding: '10px 14px', backgroundColor: '#2A2A2A', border: '1px solid #333', borderRadius: '8px', color: '#FFFFFF', fontSize: '13px', cursor: 'pointer', outline: 'none' },
+  totalRegistros: { color: '#666', fontSize: '13px', marginLeft: 'auto' },
+  tabla: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  fila: { backgroundColor: '#1A1A1A', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', border: '1px solid #333' },
+  tipoBadge: { padding: '5px 12px', borderRadius: '20px', color: '#fff', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' },
   filaInfo: { display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '160px' },
-  insumoNombre: { color: '#fff', fontWeight: '700', fontSize: '15px' },
-  motivo: { color: '#888', fontSize: '13px' },
+  insumoNombre: { color: '#FFFFFF', fontWeight: '600', fontSize: '14px' },
+  motivo: { color: '#999999', fontSize: '12px' },
   cantidades: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' },
-  cantidadLabel: { color: '#4CAF50', fontWeight: '700', fontSize: '15px' },
+  cantidadLabel: { fontWeight: '700', fontSize: '14px' },
   stockFlow: { color: '#555', fontSize: '12px' },
   fecha: { color: '#666', fontSize: '12px', whiteSpace: 'nowrap' },
-  overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100 },
-  modal: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#16213e', borderRadius: '16px', padding: '32px', width: '90%', maxWidth: '500px', zIndex: 101, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', maxHeight: '90vh', overflowY: 'auto' },
-  modalTitulo: { margin: '0 0 24px', color: '#fff', fontSize: '20px' },
+  overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 100 },
+  modal: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#1A1A1A', borderRadius: '16px', padding: '28px', width: '90%', maxWidth: '500px', zIndex: 101, border: '1px solid #333', maxHeight: '90vh', overflowY: 'auto' },
+  modalTitulo: { margin: '0 0 20px', color: '#FFFFFF', fontSize: '18px', fontWeight: '700' },
   campos: { display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '16px' },
-  label: { color: '#ccc', fontSize: '13px', fontWeight: '600', marginBottom: '6px', display: 'block' },
-  input: { padding: '12px', backgroundColor: '#0f3460', border: '1px solid #2D6A4F', borderRadius: '8px', color: '#fff', fontSize: '15px', width: '100%', boxSizing: 'border-box' },
+  label: { color: '#999999', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' },
+  input: { padding: '12px 14px', backgroundColor: '#2A2A2A', border: '1px solid #333', borderRadius: '10px', color: '#FFFFFF', fontSize: '14px', width: '100%', boxSizing: 'border-box', outline: 'none', fontFamily: 'sans-serif' },
   tipoSelector: { display: 'flex', gap: '10px' },
-  tipoBtnSelector: { flex: 1, padding: '10px', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontWeight: '700', fontSize: '14px', minHeight: '44px' },
-  tipoHint: { color: '#888', fontSize: '13px', margin: '0', fontStyle: 'italic' },
-  error: { color: '#E53935', fontSize: '13px', marginBottom: '12px' },
+  tipoBtnSelector: { flex: 1, padding: '10px', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontWeight: '700', fontSize: '13px', minHeight: '44px' },
+  tipoHint: { color: '#666', fontSize: '12px', margin: '0', fontStyle: 'italic' },
+  error: { color: '#ff6b6b', fontSize: '13px', marginBottom: '12px', backgroundColor: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: '8px', padding: '8px 12px' },
   modalBotones: { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
-  btnCancelar: { padding: '10px 20px', backgroundColor: 'transparent', border: '1px solid #555', color: '#ccc', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
-  btnGuardar: { padding: '10px 20px', backgroundColor: '#2D6A4F', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' },
+  btnCancelar: { padding: '10px 20px', backgroundColor: 'transparent', border: '1px solid #333', color: '#999999', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
+  btnGuardar: { padding: '10px 20px', backgroundColor: '#B87333', color: '#000000', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' },
 };
 
 export default MovimientosInventario;

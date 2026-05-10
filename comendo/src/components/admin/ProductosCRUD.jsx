@@ -191,7 +191,7 @@ const ProductosCRUD = () => {
                 ) : (
                   <>
                     <button
-                      style={{ ...styles.btnToggle, backgroundColor: producto.disponible ? '#2D6A4F' : '#555' }}
+                      style={{ ...styles.btnToggle, backgroundColor: producto.disponible ? 'rgba(27,94,32,0.2)' : 'rgba(80,80,80,0.2)', border: producto.disponible ? '1px solid #1B5E20' : '1px solid #555', color: producto.disponible ? '#4CAF50' : '#777' }}
                       onClick={() => toggleDisponible(producto)}
                     >
                       {producto.disponible ? '✅ Disponible' : '❌ Oculto'}
@@ -265,7 +265,7 @@ const ProductosCRUD = () => {
                   checked={form.disponible}
                   onChange={(e) => setForm({ ...form, disponible: e.target.checked })}
                 />
-                <span style={{ color: '#ccc', marginLeft: '8px' }}>Disponible en el menú</span>
+                <span style={{ color: '#CCCCCC', marginLeft: '8px' }}>Disponible en el menú</span>
               </label>
             </div>
             {error && <p style={styles.error}>{error}</p>}
@@ -300,41 +300,41 @@ const ProductosCRUD = () => {
 };
 
 const styles = {
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  titulo: { margin: 0, color: '#fff', fontSize: '22px' },
-  btnCrear: { padding: '10px 20px', backgroundColor: '#2D6A4F', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' },
-  btnExportar: { padding: '10px 20px', backgroundColor: '#1565C0', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' },
-  tabla: { display: 'flex', flexDirection: 'column', gap: '12px' },
-  fila: { backgroundColor: '#16213e', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
+  titulo: { margin: 0, color: '#FFFFFF', fontSize: '20px', fontWeight: '700' },
+  btnCrear: { padding: '10px 20px', backgroundColor: '#B87333', color: '#000000', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' },
+  btnExportar: { padding: '10px 20px', backgroundColor: 'transparent', color: '#B87333', border: '1px solid #B87333', borderRadius: '10px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
+  btnToggleVista: { padding: '10px 16px', backgroundColor: 'transparent', color: '#999', border: '1px solid #333', borderRadius: '10px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' },
+  btnToggleVistaActivo: { backgroundColor: 'rgba(184,115,51,0.15)', color: '#B87333', border: '1px solid #B87333' },
+  tabla: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  fila: { backgroundColor: '#1A1A1A', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', border: '1px solid #333', transition: 'all 0.2s ease' },
   filaIzquierda: { display: 'flex', alignItems: 'center', gap: '16px' },
-  imagenMiniatura: { width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' },
-  imagenPlaceholder: { width: '60px', height: '60px', borderRadius: '8px', backgroundColor: '#0f3460', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' },
+  imagenMiniatura: { width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 },
+  imagenPlaceholder: { width: '60px', height: '60px', borderRadius: '8px', backgroundColor: '#2A2A2A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 },
   filaInfo: { display: 'flex', flexDirection: 'column', gap: '4px' },
-  nombre: { color: '#fff', fontWeight: '700', fontSize: '16px' },
-  categoria: { color: '#888', fontSize: '13px' },
-  precio: { color: '#4CAF50', fontWeight: '700', fontSize: '15px' },
+  nombre: { color: '#FFFFFF', fontWeight: '600', fontSize: '15px' },
+  categoria: { color: '#999999', fontSize: '13px' },
+  precio: { color: '#B87333', fontWeight: '700', fontSize: '14px' },
   filaAcciones: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
-  btnToggle: { padding: '8px 12px', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-  btnEditar: { padding: '8px 12px', backgroundColor: '#F57C00', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-  btnEliminar: { padding: '8px 12px', backgroundColor: '#E53935', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-  btnReactivar: { padding: '8px 12px', backgroundColor: '#1565C0', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-  btnToggleVista: { padding: '10px 16px', backgroundColor: '#37474f', color: '#ccc', border: '1px solid #555', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
-  btnToggleVistaActivo: { backgroundColor: '#1565C0', color: '#fff', border: '1px solid #1565C0' },
-  overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100 },
-  modal: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#16213e', borderRadius: '16px', padding: '32px', width: '90%', maxWidth: '480px', zIndex: 101, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', maxHeight: '90vh', overflowY: 'auto' },
-  modalTitulo: { margin: '0 0 24px', color: '#fff', fontSize: '20px' },
+  btnToggle: { padding: '7px 12px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' },
+  btnEditar: { padding: '7px 12px', backgroundColor: 'rgba(184,115,51,0.15)', border: '1px solid #B87333', borderRadius: '8px', color: '#B87333', cursor: 'pointer', fontSize: '12px', fontWeight: '600' },
+  btnEliminar: { padding: '7px 12px', backgroundColor: 'rgba(139,26,26,0.15)', border: '1px solid #8B1A1A', borderRadius: '8px', color: '#ff6b6b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' },
+  btnReactivar: { padding: '7px 12px', backgroundColor: 'rgba(184,115,51,0.15)', border: '1px solid #B87333', borderRadius: '8px', color: '#B87333', cursor: 'pointer', fontSize: '12px', fontWeight: '600' },
+  overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 100 },
+  modal: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#1A1A1A', borderRadius: '16px', padding: '28px', width: '90%', maxWidth: '480px', zIndex: 101, border: '1px solid #333', maxHeight: '90vh', overflowY: 'auto' },
+  modalTitulo: { margin: '0 0 20px', color: '#FFFFFF', fontSize: '18px', fontWeight: '700' },
   campos: { display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' },
-  input: { padding: '12px', backgroundColor: '#0f3460', border: '1px solid #2D6A4F', borderRadius: '8px', color: '#fff', fontSize: '15px', width: '100%', boxSizing: 'border-box' },
-  label: { color: '#ccc', fontSize: '14px', fontWeight: '600', marginBottom: '6px', display: 'block' },
+  input: { padding: '12px 14px', backgroundColor: '#2A2A2A', border: '1px solid #333', borderRadius: '10px', color: '#FFFFFF', fontSize: '14px', width: '100%', boxSizing: 'border-box', outline: 'none', fontFamily: 'sans-serif' },
+  label: { color: '#999999', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' },
   imagenUpload: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  imagenPreview: { width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #2D6A4F' },
-  inputFile: { color: '#ccc', fontSize: '14px' },
+  imagenPreview: { width: '100%', height: '160px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #333' },
+  inputFile: { color: '#999', fontSize: '13px' },
   imagenHint: { color: '#555', fontSize: '12px', margin: 0 },
   checkLabel: { display: 'flex', alignItems: 'center', cursor: 'pointer' },
-  error: { color: '#E53935', fontSize: '13px', marginBottom: '12px' },
+  error: { color: '#ff6b6b', fontSize: '13px', marginBottom: '12px', backgroundColor: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: '8px', padding: '8px 12px' },
   modalBotones: { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
-  btnCancelar: { padding: '10px 20px', backgroundColor: 'transparent', border: '1px solid #555', color: '#ccc', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
-  btnGuardar: { padding: '10px 20px', backgroundColor: '#2D6A4F', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' },
+  btnCancelar: { padding: '10px 20px', backgroundColor: 'transparent', border: '1px solid #333', color: '#999999', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
+  btnGuardar: { padding: '10px 20px', backgroundColor: '#B87333', color: '#000000', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' },
 };
 
 export default ProductosCRUD;

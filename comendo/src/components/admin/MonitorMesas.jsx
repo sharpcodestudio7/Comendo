@@ -4,9 +4,9 @@ import { supabase } from '../../api/supabase';
 import ModalConfirm from '../ModalConfirm';
 
 const ESTADOS_MESA = {
-  Libre: { color: '#2D6A4F', emoji: '🟢', label: 'Libre' },
-  Ocupada: { color: '#F57C00', emoji: '🟡', label: 'Ocupada' },
-  Por_Pagar: { color: '#E53935', emoji: '🔴', label: 'Por Pagar' },
+  Libre: { color: '#1B5E20', emoji: '🟢', label: 'Libre' },
+  Ocupada: { color: '#B87333', emoji: '🟡', label: 'Ocupada' },
+  Por_Pagar: { color: '#8B1A1A', emoji: '🔴', label: 'Por Pagar' },
 };
 
 const METODOS_PAGO = [
@@ -271,42 +271,40 @@ const MonitorMesas = () => {
 };
 
 const styles = {
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  titulo: { margin: 0, color: '#fff', fontSize: '22px' },
-  btnRefresh: { padding: '8px 16px', backgroundColor: '#16213e', color: '#ccc', border: '1px solid #2D6A4F', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' },
-  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' },
-  kpiCard: { backgroundColor: '#16213e', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' },
-  kpiLabel: { color: '#888', fontSize: '13px', fontWeight: '600' },
-  kpiValor: { color: '#fff', fontSize: '28px', fontWeight: '700' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
+  titulo: { margin: 0, color: '#FFFFFF', fontSize: '20px', fontWeight: '700' },
+  btnRefresh: { padding: '8px 16px', backgroundColor: 'transparent', color: '#B87333', border: '1px solid #B87333', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' },
+  kpiCard: { backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid #333' },
+  kpiLabel: { color: '#999999', fontSize: '12px', fontWeight: '600' },
+  kpiValor: { color: '#FFFFFF', fontSize: '26px', fontWeight: '700' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' },
-  card: { backgroundColor: '#16213e', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' },
+  card: { backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', border: '1px solid #333', transition: 'all 0.2s ease' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  mesaNumero: { margin: 0, color: '#fff', fontSize: '20px', fontWeight: '700' },
-  estadoBadge: { padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', color: '#fff' },
+  mesaNumero: { margin: 0, color: '#FFFFFF', fontSize: '20px', fontWeight: '700' },
+  estadoBadge: { padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', color: '#fff' },
   pedidosLista: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  pedidoItem: { backgroundColor: '#0f3460', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '4px' },
+  pedidoItem: { backgroundColor: '#2A2A2A', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '4px', border: '1px solid #333' },
   pedidoHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '4px' },
-  pedidoId: { color: '#888', fontSize: '12px' },
+  pedidoId: { color: '#666', fontSize: '12px' },
   pedidoEstado: { fontSize: '12px', fontWeight: '700' },
-  pedidoProducto: { color: '#ccc', fontSize: '13px' },
-  totalMesa: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: '1px solid #0f3460' },
-  totalLabel: { color: '#888', fontSize: '14px' },
-  totalValor: { color: '#4CAF50', fontSize: '18px', fontWeight: '700' },
-  sinPedidos: { color: '#555', fontSize: '14px', textAlign: 'center', margin: '8px 0' },
-  btnCerrar: { width: '100%', padding: '12px', backgroundColor: '#E53935', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', minHeight: '44px' },
-
-  // Método de pago en tarjeta
+  pedidoProducto: { color: '#CCCCCC', fontSize: '13px' },
+  totalMesa: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: '1px solid #333' },
+  totalLabel: { color: '#999999', fontSize: '13px' },
+  totalValor: { color: '#B87333', fontSize: '16px', fontWeight: '700' },
+  sinPedidos: { color: '#444', fontSize: '13px', textAlign: 'center', margin: '8px 0', fontStyle: 'italic' },
+  btnCerrar: { width: '100%', padding: '12px', backgroundColor: 'transparent', color: '#ff6b6b', border: '1px solid #ff6b6b', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minHeight: '44px', cursor: 'pointer' },
   pagoRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' },
-  pagoBadge: { padding: '3px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: '700', color: '#fff' },
+  pagoBadge: { padding: '3px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', color: '#fff' },
   pagoSinDefinir: { color: '#555', fontSize: '12px', fontStyle: 'italic' },
-  btnEditarPago: { background: 'none', border: 'none', color: '#888', fontSize: '12px', cursor: 'pointer', padding: '2px 4px' },
-  pagoEditor: { display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px', backgroundColor: '#16213e', borderRadius: '8px', padding: '8px' },
-  pagoEditorLabel: { color: '#ccc', fontSize: '11px', fontWeight: '600' },
+  btnEditarPago: { background: 'none', border: 'none', color: '#666', fontSize: '12px', cursor: 'pointer', padding: '2px 4px' },
+  pagoEditor: { display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px', backgroundColor: '#1A1A1A', borderRadius: '8px', padding: '8px', border: '1px solid #333' },
+  pagoEditorLabel: { color: '#999', fontSize: '11px', fontWeight: '600' },
   pagoEditorBotones: { display: 'flex', gap: '6px' },
   pagoEditorBtn: { flex: 1, padding: '6px 2px', border: '1px solid', borderRadius: '6px', backgroundColor: 'transparent', cursor: 'pointer', fontSize: '11px', fontWeight: '600' },
-  btnCancelarPago: { background: 'none', border: 'none', color: '#888', fontSize: '11px', cursor: 'pointer', alignSelf: 'center' },
+  btnCancelarPago: { background: 'none', border: 'none', color: '#666', fontSize: '11px', cursor: 'pointer', alignSelf: 'center' },
   meseroRow: { marginTop: '4px' },
-  meseroBadge: { backgroundColor: 'rgba(45,106,79,0.2)', color: '#4CAF50', border: '1px solid #2D6A4F', borderRadius: '10px', padding: '2px 10px', fontSize: '12px', fontWeight: '600' },
+  meseroBadge: { backgroundColor: 'rgba(184,115,51,0.15)', color: '#B87333', border: '1px solid rgba(184,115,51,0.4)', borderRadius: '10px', padding: '2px 10px', fontSize: '12px', fontWeight: '600' },
 };
 
 export default MonitorMesas;

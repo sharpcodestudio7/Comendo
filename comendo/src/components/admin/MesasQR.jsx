@@ -146,16 +146,16 @@ const MesasQR = () => {
 
 const styles = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
-  titulo: { margin: 0, color: '#fff', fontSize: '22px' },
-  btnDescargarTodos: { padding: '10px 20px', backgroundColor: '#1565C0', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' },
-  descripcion: { color: '#888', fontSize: '14px', marginBottom: '24px' },
+  titulo: { margin: 0, color: '#FFFFFF', fontSize: '20px', fontWeight: '700' },
+  btnDescargarTodos: { padding: '10px 20px', backgroundColor: 'transparent', color: '#B87333', border: '1px solid #B87333', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' },
+  descripcion: { color: '#999999', fontSize: '14px', marginBottom: '24px' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' },
-  card: { backgroundColor: '#16213e', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' },
-  estadoBadge: { padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', color: '#fff' },
-  mesaNumero: { margin: 0, color: '#fff', fontSize: '20px', fontWeight: '700' },
-  qrContainer: { backgroundColor: '#fff', borderRadius: '8px', padding: '8px' },
+  card: { backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', border: '1px solid #333', transition: 'all 0.2s ease' },
+  estadoBadge: { padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', color: '#fff' },
+  mesaNumero: { margin: 0, color: '#FFFFFF', fontSize: '18px', fontWeight: '700' },
+  qrContainer: { backgroundColor: '#ffffff', borderRadius: '8px', padding: '12px' },
   urlTexto: { margin: 0, color: '#555', fontSize: '11px', textAlign: 'center', wordBreak: 'break-all' },
-  btnDescargar: { width: '100%', padding: '10px', backgroundColor: '#2D6A4F', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' },
+  btnDescargar: { width: '100%', padding: '10px', backgroundColor: '#B87333', color: '#000000', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' },
 };
 
 export default MesasQR;
