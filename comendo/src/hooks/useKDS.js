@@ -21,6 +21,8 @@ const useKDS = () => {
         id_pedido,
         estado_actual,
         fecha_creacion,
+        id_mesero,
+        mesero:usuarios!pedidos_id_mesero_fkey ( nombre ),
         mesas ( numero ),
         detalle_pedidos (
           id_detalle,

@@ -129,16 +129,38 @@ const OrderTrackingPage = () => {
     cargarPedido();
   }, [pedidoId]);
 
-  // Suscripción Realtime a cambios de estado
+  // Suscripción Realtime a cambios de estado — recarga completa para incluir mesero asignado
   useEffect(() => {
+    const recargarPedido = async () => {
+      const { data } = await supabase
+        .from('pedidos')
+        .select(`
+          id_pedido,
+          id_mesa,
+          estado_actual,
+          total,
+          fecha_creacion,
+          mesero:usuarios!pedidos_id_mesero_fkey ( nombre ),
+          detalle_pedidos (
+            id_detalle,
+            cantidad,
+            precio_unitario,
+            notas,
+            productos ( nombre ),
+            exclusiones_pedido ( nombre_insumo )
+          )
+        `)
+        .eq('id_pedido', pedidoId)
+        .single();
+      if (data) setPedido(data);
+    };
+
     const canal = supabase
       .channel(`pedido-${pedidoId}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'pedidos', filter: `id_pedido=eq.${pedidoId}` },
-        (payload) => {
-          setPedido((prev) => ({ ...prev, estado_actual: payload.new.estado_actual }));
-        }
+        recargarPedido
       )
       .subscribe();
     return () => supabase.removeChannel(canal);
