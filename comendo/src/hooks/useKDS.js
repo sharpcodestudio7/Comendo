@@ -1,7 +1,3 @@
-// src/hooks/useKDS.js
-// Hook del Kitchen Display System.
-// Ahora trae las exclusiones de ingredientes y notas de cada detalle de pedido.
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../api/supabase';
 import useKDSSound from './useKDSSound';
@@ -16,14 +12,16 @@ const useKDS = () => {
   const [error, setError] = useState(null);
   const { sonarNuevoPedido } = useKDSSound();
 
-  // ── Carga inicial (ahora incluye notas y exclusiones) ─────────────────
   const cargarPedidos = async () => {
+    const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
     const { data, error } = await supabase
       .from('pedidos')
       .select(`
         id_pedido,
         estado_actual,
         fecha_creacion,
+        fecha_listo,
         id_mesero,
         mesero:usuarios!pedidos_id_mesero_fkey ( nombre ),
         mesas ( numero ),
@@ -41,12 +39,22 @@ const useKDS = () => {
         )
       `)
       .in('estado_actual', ESTADOS_KDS)
+      .gte('fecha_creacion', hace24h)
       .order('fecha_creacion', { ascending: true });
 
     if (error) {
       setError(error.message);
     } else {
-      setPedidos(data);
+      const ahora = new Date();
+      const pedidosFiltrados = data.filter((p) => {
+        if (p.estado_actual !== 'Listo') return true;
+        const fechaReferencia = p.fecha_listo
+          ? new Date(p.fecha_listo)
+          : new Date(p.fecha_creacion);
+        const minutosEnListo = (ahora - fechaReferencia) / 60000;
+        return minutosEnListo < MINUTOS_VISIBLE_LISTO;
+      });
+      setPedidos(pedidosFiltrados);
     }
     setCargando(false);
   };
@@ -65,7 +73,7 @@ const useKDS = () => {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             sonarNuevoPedido();
-            cargarPedidos(); // Recarga completa para traer exclusiones y notas
+            cargarPedidos();
           }
 
           if (payload.eventType === 'UPDATE') {
@@ -129,10 +137,9 @@ const useKDS = () => {
       return;
     }
 
-    // Auto-asignar mesero cuando el pedido pasa a Listo
     if (nuevoEstado === 'Listo') {
       await asignarMeseroAutomatico(pedidoId);
-      cargarPedidos(); // Recargar para mostrar el mesero asignado
+      cargarPedidos();
     }
   };
 

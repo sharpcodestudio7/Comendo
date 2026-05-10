@@ -1,36 +1,79 @@
-// src/pages/KDSPage.jsx
-// Vista KDS de cocina con exclusiones de ingredientes y notas del comensal.
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../api/supabase';
+import { UtensilsCrossed } from 'lucide-react';
 import useKDS from '../hooks/useKDS';
+
+const KDS_CSS = `
+  .btn-kds-accion {
+    transition: all 0.2s ease;
+    min-height: 48px;
+  }
+  .btn-kds-accion:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    filter: brightness(1.15);
+  }
+  .btn-kds-accion:active {
+    transform: scale(0.98);
+  }
+  @keyframes alertBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  .alerta-nuevo-pedido {
+    animation: alertBlink 0.5s ease-in-out 3;
+  }
+  @keyframes urgentPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.3); }
+    50% { box-shadow: 0 0 15px 3px rgba(255, 68, 68, 0.2); }
+  }
+  .tarjeta-urgente {
+    animation: urgentPulse 2s ease-in-out infinite;
+    border-color: #ff4444 !important;
+  }
+  .kds-tarjeta {
+    transition: all 0.3s ease;
+  }
+  .kds-tarjeta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .btn-kds-salir {
+    transition: all 0.2s ease;
+  }
+  .btn-kds-salir:hover {
+    background-color: rgba(184, 115, 51, 0.1) !important;
+  }
+  @media (max-width: 480px) {
+    .kds-tablero {
+      grid-template-columns: 1fr !important;
+    }
+  }
+`;
 
 const COLUMNAS = [
   {
     estado: 'Recibido',
     estadoSiguiente: 'Preparando',
     label: 'RECIBIDOS',
-    emoji: '🔔',
-    colorHeader: '#E53935',
-    colorBoton: '#E53935',
-    labelBoton: '▶ Iniciar',
+    colorHeader: '#8B1A1A',
+    colorBoton: '#8B1A1A',
+    labelBoton: 'Iniciar',
   },
   {
     estado: 'Preparando',
     estadoSiguiente: 'Listo',
     label: 'EN PREPARACIÓN',
-    emoji: '🍳',
-    colorHeader: '#F57C00',
-    colorBoton: '#F57C00',
-    labelBoton: '✓ Listo',
+    colorHeader: '#7B5B00',
+    colorBoton: '#1B5E20',
+    labelBoton: 'Listo',
   },
   {
     estado: 'Listo',
     estadoSiguiente: null,
     label: 'LISTOS',
-    emoji: '✅',
-    colorHeader: '#2D6A4F',
+    colorHeader: '#1B5E20',
     colorBoton: null,
     labelBoton: null,
   },
@@ -40,30 +83,29 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
   const minutosEspera = Math.floor(
     (new Date() - new Date(pedido.fecha_creacion)) / 60000
   );
-  const esperaExcesiva = minutosEspera > 15;
+  const esUrgente = minutosEspera > 15;
 
   return (
-    <div style={{
-      ...styles.tarjeta,
-      borderTop: `4px solid ${columna.colorHeader}`,
-      boxShadow: esperaExcesiva
-        ? '0 0 12px rgba(229, 57, 53, 0.5)'
-        : '0 2px 8px rgba(0,0,0,0.12)',
-    }}>
+    <div
+      className={`kds-tarjeta${esUrgente ? ' tarjeta-urgente' : ''}`}
+      style={{
+        ...styles.tarjeta,
+        borderTop: `3px solid ${columna.colorHeader}`,
+      }}
+    >
       <div style={styles.tarjetaHeader}>
         <span style={styles.mesaLabel}>
           MESA {pedido.mesas?.numero ?? '—'}
         </span>
         <span style={{
           ...styles.tiempoLabel,
-          color: esperaExcesiva ? '#E53935' : '#666',
-          fontWeight: esperaExcesiva ? '700' : '400',
+          color: esUrgente ? '#ff4444' : '#999999',
+          fontWeight: esUrgente ? '700' : '400',
         }}>
           ⏱ {minutosEspera} min
         </span>
       </div>
 
-      {/* Lista de productos con exclusiones y notas */}
       <div style={styles.productoLista}>
         {pedido.detalle_pedidos.map((detalle, i) => {
           const exclusiones = detalle.exclusiones_pedido || [];
@@ -71,7 +113,6 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
 
           return (
             <div key={i} style={styles.productoBloque}>
-              {/* Línea del producto */}
               <div style={styles.productoItem}>
                 <span style={styles.productoCantidad}>{detalle.cantidad}x</span>
                 <span style={styles.productoNombre}>
@@ -79,7 +120,6 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
                 </span>
               </div>
 
-              {/* Exclusiones: bloque rojo visible */}
               {exclusiones.length > 0 && (
                 <div style={styles.exclusionBloque}>
                   <span style={styles.exclusionLabel}>⛔ SIN:</span>
@@ -91,7 +131,6 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
                 </div>
               )}
 
-              {/* Notas: bloque naranja */}
               {notas && notas.trim() && (
                 <div style={styles.notasBloque}>
                   <span style={styles.notasIcon}>📝</span>
@@ -103,7 +142,6 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
         })}
       </div>
 
-      {/* Mesero asignado — solo visible en columna Listo */}
       {pedido.mesero?.nombre && (
         <div style={styles.meseroBloque}>
           <span style={styles.meseroIcon}>🛎</span>
@@ -113,6 +151,7 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
 
       {columna.labelBoton && (
         <button
+          className="btn-kds-accion"
           style={{ ...styles.botonAccion, backgroundColor: columna.colorBoton }}
           onClick={() => onCambiarEstado(pedido.id_pedido, columna.estadoSiguiente)}
         >
@@ -142,122 +181,335 @@ const KDSPage = () => {
     navigate('/login');
   };
 
-  if (cargando) return <p style={styles.mensaje}>Cargando pedidos...</p>;
-  if (error) return <p style={styles.mensaje}>Error: {error}</p>;
+  if (cargando) return (
+    <div style={styles.paginaCarga}>
+      <p style={styles.mensajeCarga}>Cargando pedidos...</p>
+    </div>
+  );
+
+  if (error) return (
+    <div style={styles.paginaCarga}>
+      <p style={styles.mensajeCarga}>Error: {error}</p>
+    </div>
+  );
 
   return (
-    <div style={styles.pagina}>
-      <div style={styles.header}>
-        <h1 style={styles.titulo}>🍽 Comendo — Cocina</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <span style={styles.onlineIndicator}>● EN LÍNEA</span>
-          <button onClick={handleLogout} style={styles.btnLogout}>
-            🚪 Salir
-          </button>
+    <>
+      <style>{KDS_CSS}</style>
+
+      <div style={styles.pagina}>
+        <header style={styles.header}>
+          <div style={styles.headerLogo}>
+            <UtensilsCrossed size={28} color="#B87333" />
+            <h1 style={styles.titulo}>Comendo — Cocina</h1>
+          </div>
+          <div style={styles.headerAcciones}>
+            <span style={styles.onlineIndicator}>
+              <span style={styles.onlineDot} />
+              EN LÍNEA
+            </span>
+            <button className="btn-kds-salir" onClick={handleLogout} style={styles.btnLogout}>
+              Salir
+            </button>
+          </div>
+        </header>
+
+        {nuevoPedidoAlerta && (
+          <div className="alerta-nuevo-pedido" style={styles.alertaNuevoPedido}>
+            🔔 ¡NUEVO PEDIDO ENTRANTE!
+          </div>
+        )}
+
+        <div className="kds-tablero" style={styles.tablero}>
+          {COLUMNAS.map((columna) => {
+            const pedidosColumna = pedidos.filter(
+              (p) => p.estado_actual === columna.estado
+            );
+            return (
+              <div key={columna.estado} style={styles.columna}>
+                <div style={{ ...styles.columnaHeader, backgroundColor: columna.colorHeader }}>
+                  <span style={styles.columnaLabel}>{columna.label}</span>
+                  <span style={styles.badge}>{pedidosColumna.length}</span>
+                </div>
+
+                <div style={styles.columnaBody}>
+                  {pedidosColumna.length === 0 ? (
+                    <p style={styles.vacio}>Sin pedidos</p>
+                  ) : (
+                    pedidosColumna.map((pedido) => (
+                      <TarjetaPedido
+                        key={pedido.id_pedido}
+                        pedido={pedido}
+                        columna={columna}
+                        onCambiarEstado={cambiarEstado}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
-
-      {nuevoPedidoAlerta && (
-        <div style={styles.alertaNuevoPedido}>
-          🔔 ¡NUEVO PEDIDO ENTRANTE!
-        </div>
-      )}
-
-      <div style={styles.tablero}>
-        {COLUMNAS.map((columna) => {
-          const pedidosColumna = pedidos.filter(
-            (p) => p.estado_actual === columna.estado
-          );
-          return (
-            <div key={columna.estado} style={styles.columna}>
-              <div style={{
-                ...styles.columnaHeader,
-                backgroundColor: columna.colorHeader,
-              }}>
-                <span>{columna.emoji} {columna.label}</span>
-                <span style={styles.badge}>{pedidosColumna.length}</span>
-              </div>
-
-              <div style={styles.columnaBody}>
-                {pedidosColumna.length === 0 ? (
-                  <p style={styles.vacio}>Sin pedidos</p>
-                ) : (
-                  pedidosColumna.map((pedido) => (
-                    <TarjetaPedido
-                      key={pedido.id_pedido}
-                      pedido={pedido}
-                      columna={columna}
-                      onCambiarEstado={cambiarEstado}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    </>
   );
 };
 
 const styles = {
-  pagina: { minHeight: '100vh', backgroundColor: '#1a1a2e', fontFamily: 'Arial, sans-serif', display: 'flex', flexDirection: 'column' },
-  mensaje: { color: '#fff', textAlign: 'center', marginTop: '40px', fontSize: '18px' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', backgroundColor: '#16213e', borderBottom: '2px solid #2D6A4F' },
-  titulo: { margin: 0, color: '#fff', fontSize: '22px' },
-  onlineIndicator: { color: '#4CAF50', fontWeight: '700', fontSize: '14px' },
-  btnLogout: { padding: '8px 16px', backgroundColor: 'transparent', border: '1px solid #E53935', color: '#E53935', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' },
-  alertaNuevoPedido: { backgroundColor: '#E53935', color: '#fff', textAlign: 'center', padding: '12px', fontSize: '16px', fontWeight: '700' },
-  tablero: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', padding: '20px', flex: 1 },
-  columna: { backgroundColor: '#16213e', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column' },
-  columnaHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', color: '#fff', fontWeight: '700', fontSize: '15px' },
-  badge: { backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: '12px', padding: '2px 10px', fontSize: '14px', fontWeight: '700' },
-  columnaBody: { padding: '12px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' },
-  vacio: { color: '#555', textAlign: 'center', marginTop: '20px', fontSize: '14px' },
+  pagina: {
+    minHeight: '100vh',
+    backgroundColor: '#0D0D0D',
+    fontFamily: 'sans-serif',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  paginaCarga: {
+    minHeight: '100vh',
+    backgroundColor: '#0D0D0D',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mensajeCarga: {
+    color: '#666',
+    fontSize: '18px',
+  },
 
-  // Tarjeta de pedido
-  tarjeta: { backgroundColor: '#0f3460', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' },
-  tarjetaHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  mesaLabel: { color: '#fff', fontWeight: '700', fontSize: '18px' },
-  tiempoLabel: { fontSize: '13px' },
+  // Header
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '14px 24px',
+    backgroundColor: '#1A1A1A',
+    borderBottom: '1px solid #333',
+    flexShrink: 0,
+  },
+  headerLogo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  titulo: {
+    margin: 0,
+    color: '#FFFFFF',
+    fontSize: '20px',
+    fontWeight: 600,
+  },
+  headerAcciones: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  onlineIndicator: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    color: '#4CAF50',
+    fontWeight: 700,
+    fontSize: '12px',
+  },
+  onlineDot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    backgroundColor: '#4CAF50',
+    display: 'inline-block',
+  },
+  btnLogout: {
+    padding: '8px 16px',
+    backgroundColor: 'transparent',
+    border: '1px solid #B87333',
+    color: '#B87333',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 600,
+  },
+
+  // Alerta
+  alertaNuevoPedido: {
+    backgroundColor: '#8B1A1A',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    padding: '14px',
+    fontSize: '16px',
+    fontWeight: 700,
+    flexShrink: 0,
+  },
+
+  // Tablero
+  tablero: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: '16px',
+    padding: '20px',
+    flex: 1,
+    alignItems: 'start',
+  },
+  columna: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: '12px',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  columnaHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '14px 16px',
+    color: '#FFFFFF',
+    fontWeight: 700,
+    fontSize: '14px',
+    flexShrink: 0,
+  },
+  columnaLabel: {
+    letterSpacing: '0.5px',
+  },
+  badge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: '12px',
+    padding: '2px 10px',
+    fontSize: '14px',
+    fontWeight: 700,
+  },
+  columnaBody: {
+    padding: '12px',
+    flex: 1,
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    minHeight: '120px',
+  },
+  vacio: {
+    color: '#444',
+    textAlign: 'center',
+    marginTop: '20px',
+    fontSize: '14px',
+    fontStyle: 'italic',
+  },
+
+  // Tarjeta
+  tarjeta: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: '12px',
+    border: '1px solid #333',
+    padding: '14px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  tarjetaHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  mesaLabel: {
+    color: '#FFFFFF',
+    fontWeight: 700,
+    fontSize: '20px',
+  },
+  tiempoLabel: {
+    fontSize: '13px',
+  },
 
   // Productos
-  productoLista: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  productoBloque: { display: 'flex', flexDirection: 'column', gap: '4px' },
-  productoItem: { display: 'flex', gap: '8px', alignItems: 'center' },
-  productoCantidad: { color: '#4CAF50', fontWeight: '700', fontSize: '16px', minWidth: '28px' },
-  productoNombre: { color: '#e0e0e0', fontSize: '15px' },
+  productoLista: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  productoBloque: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  productoItem: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+  },
+  productoCantidad: {
+    color: '#B87333',
+    fontWeight: 700,
+    fontSize: '16px',
+    minWidth: '28px',
+  },
+  productoNombre: {
+    color: '#E0E0E0',
+    fontSize: '15px',
+  },
 
-  // Exclusiones (bloque rojo para cocina)
+  // Exclusiones
   exclusionBloque: {
-    display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
-    backgroundColor: 'rgba(255,23,68,0.15)',
-    border: '1px solid #ff1744',
-    borderRadius: '6px', padding: '5px 8px', marginLeft: '36px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    flexWrap: 'wrap',
+    backgroundColor: 'rgba(139, 26, 26, 0.2)',
+    border: '1px solid #8B1A1A',
+    borderRadius: '8px',
+    padding: '5px 8px',
+    marginLeft: '36px',
   },
   exclusionLabel: {
-    color: '#ff1744', fontSize: '12px', fontWeight: '700',
+    color: '#ff6b6b',
+    fontSize: '12px',
+    fontWeight: 700,
   },
   exclusionChip: {
-    color: '#ff8a80', fontSize: '12px', fontWeight: '600',
+    color: '#ff6b6b',
+    fontSize: '12px',
+    fontWeight: 600,
   },
 
-  // Notas (bloque naranja para cocina)
+  // Notas
   notasBloque: {
-    display: 'flex', alignItems: 'flex-start', gap: '4px',
-    backgroundColor: 'rgba(255,167,38,0.12)',
-    border: '1px solid #ffa726',
-    borderRadius: '6px', padding: '5px 8px', marginLeft: '36px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '4px',
+    backgroundColor: 'rgba(184, 115, 51, 0.15)',
+    border: '1px solid rgba(184, 115, 51, 0.4)',
+    borderRadius: '8px',
+    padding: '5px 8px',
+    marginLeft: '36px',
   },
   notasIcon: { fontSize: '12px' },
-  notasTexto: { color: '#ffcc80', fontSize: '12px' },
+  notasTexto: {
+    color: '#E8D5A0',
+    fontSize: '12px',
+  },
 
-  botonAccion: { width: '100%', padding: '12px', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: '700', fontSize: '15px', cursor: 'pointer', minHeight: '44px' },
-
-  // Mesero asignado
-  meseroBloque: { display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(45,106,79,0.2)', border: '1px solid #2D6A4F', borderRadius: '6px', padding: '5px 10px' },
+  // Mesero
+  meseroBloque: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: 'rgba(27, 94, 32, 0.2)',
+    border: '1px solid #1B5E20',
+    borderRadius: '6px',
+    padding: '5px 10px',
+  },
   meseroIcon: { fontSize: '14px' },
-  meseroNombre: { color: '#4CAF50', fontSize: '13px', fontWeight: '700' },
+  meseroNombre: {
+    color: '#4CAF50',
+    fontSize: '13px',
+    fontWeight: 700,
+  },
+
+  // Botón acción
+  botonAccion: {
+    width: '100%',
+    padding: '12px',
+    border: 'none',
+    borderRadius: '10px',
+    color: '#FFFFFF',
+    fontWeight: 700,
+    fontSize: '15px',
+    cursor: 'pointer',
+  },
 };
 
 export default KDSPage;
