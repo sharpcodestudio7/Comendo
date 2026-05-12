@@ -45,6 +45,13 @@ const KDS_CSS = `
   .btn-kds-salir:hover {
     background-color: rgba(184, 115, 51, 0.1) !important;
   }
+  .cronometro-urgent {
+    animation: cronometroParpadeo 1s ease-in-out infinite;
+  }
+  @keyframes cronometroParpadeo {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.5; }
+  }
   @media (max-width: 480px) {
     .kds-tablero {
       grid-template-columns: 1fr !important;
@@ -79,6 +86,45 @@ const COLUMNAS = [
   },
 ];
 
+const CronometroPedido = ({ fechaCreacion }) => {
+  const [tiempo, setTiempo] = useState('');
+  const [nivel, setNivel] = useState('normal');
+
+  useEffect(() => {
+    const calcular = () => {
+      const diffMs = new Date() - new Date(fechaCreacion);
+      const minutos = Math.floor(diffMs / 60000);
+      const segundos = Math.floor((diffMs % 60000) / 1000);
+      setTiempo(`${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`);
+      setNivel(minutos >= 15 ? 'urgent' : minutos >= 10 ? 'warning' : 'normal');
+    };
+    calcular();
+    const intervalo = setInterval(calcular, 1000);
+    return () => clearInterval(intervalo);
+  }, [fechaCreacion]);
+
+  const colores = { normal: '#B87333', warning: '#FFB300', urgent: '#ff4444' };
+
+  return (
+    <div
+      className={nivel === 'urgent' ? 'cronometro-urgent' : ''}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontSize: '14px',
+        fontWeight: '700',
+        fontFamily: 'monospace',
+        color: colores[nivel],
+        letterSpacing: '1px',
+      }}
+    >
+      <span style={{ fontSize: '12px' }}>⏱</span>
+      {tiempo}
+    </div>
+  );
+};
+
 const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
   const minutosEspera = Math.floor(
     (new Date() - new Date(pedido.fecha_creacion)) / 60000
@@ -97,13 +143,7 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
         <span style={styles.mesaLabel}>
           MESA {pedido.mesas?.numero ?? '—'}
         </span>
-        <span style={{
-          ...styles.tiempoLabel,
-          color: esUrgente ? '#ff4444' : '#999999',
-          fontWeight: esUrgente ? '700' : '400',
-        }}>
-          ⏱ {minutosEspera} min
-        </span>
+        <CronometroPedido fechaCreacion={pedido.fecha_creacion} />
       </div>
 
       <div style={styles.productoLista}>
