@@ -17,7 +17,7 @@ const useActivePedido = (mesaId) => {
         .from('pedidos')
         .select('id_pedido, estado_actual, total, metodo_pago, fecha_creacion')
         .eq('id_mesa', mesaId)
-        .in('estado_actual', ['Recibido', 'Preparando'])
+        .in('estado_actual', ['Recibido', 'Preparando', 'Listo', 'Entregado'])
         .order('fecha_creacion', { ascending: false })
         .limit(1)
         .maybeSingle();

@@ -112,11 +112,29 @@ const OrderTrackingPage = () => {
   const [modalConfirm, setModalConfirm]         = useState(false);
   const [gracias, setGracias]                   = useState(false);
   const [procesando, setProcesando]             = useState(false);
+  const [pedidosMesa, setPedidosMesa]           = useState([]);
 
   useEffect(() => {
     document.body.style.backgroundColor = '#0D0D0D';
     return () => { document.body.style.backgroundColor = ''; };
   }, []);
+
+  const cargarOtrosPedidosMesa = async (idMesa) => {
+    const { data } = await supabase
+      .from('pedidos')
+      .select(`
+        id_pedido, estado_actual,
+        detalle_pedidos (
+          id_detalle, cantidad, precio_unitario, notas,
+          productos ( nombre ),
+          exclusiones_pedido ( nombre_insumo )
+        )
+      `)
+      .eq('id_mesa', idMesa)
+      .in('estado_actual', ['Recibido', 'Preparando', 'Listo', 'Entregado'])
+      .neq('id_pedido', pedidoId);
+    setPedidosMesa(data || []);
+  };
 
   // Carga inicial del pedido (incluye exclusiones y notas por ítem)
   useEffect(() => {
@@ -142,8 +160,9 @@ const OrderTrackingPage = () => {
         .eq('id_pedido', pedidoId)
         .single();
 
-      if (error) setError('No pudimos encontrar tu pedido.');
-      else        setPedido(data);
+      if (error) { setError('No pudimos encontrar tu pedido.'); setCargando(false); return; }
+      setPedido(data);
+      if (data?.id_mesa) await cargarOtrosPedidosMesa(data.id_mesa);
       setCargando(false);
     };
     cargarPedido();
@@ -172,7 +191,10 @@ const OrderTrackingPage = () => {
         `)
         .eq('id_pedido', pedidoId)
         .single();
-      if (data) setPedido(data);
+      if (data) {
+        setPedido(data);
+        if (data.id_mesa) await cargarOtrosPedidosMesa(data.id_mesa);
+      }
     };
 
     const canal = supabase
@@ -195,18 +217,33 @@ const OrderTrackingPage = () => {
 
     const idMesa = pedido?.id_mesa;
 
-    await supabase
-      .from('pedidos')
-      .update({ estado_actual: 'Pagado' })
-      .eq('id_pedido', pedidoId);
-
     if (idMesa) {
+      // Cierra TODOS los pedidos activos de la mesa, no solo el del URL
+      const { data: todosActivos } = await supabase
+        .from('pedidos')
+        .select('id_pedido')
+        .eq('id_mesa', idMesa)
+        .in('estado_actual', ['Recibido', 'Preparando', 'Listo', 'Entregado']);
+
+      if (todosActivos?.length > 0) {
+        await supabase
+          .from('pedidos')
+          .update({ estado_actual: 'Pagado' })
+          .in('id_pedido', todosActivos.map(p => p.id_pedido));
+      }
+
       await supabase
         .from('mesas')
         .update({ estado: 'Libre', token_sesion_actual: null })
         .eq('id_mesa', idMesa);
 
       localStorage.removeItem(`comendo_session_${idMesa}`);
+    } else {
+      // Fallback sin mesa: solo cierra el pedido actual
+      await supabase
+        .from('pedidos')
+        .update({ estado_actual: 'Pagado' })
+        .eq('id_pedido', pedidoId);
     }
 
     setCuentaSolicitada(true);
@@ -233,6 +270,10 @@ const OrderTrackingPage = () => {
   if (!pedido) return null;
 
   const pasoActual = PASOS.findIndex((p) => p.estado === pedido.estado_actual);
+  const todosLosDetalles = [
+    ...pedido.detalle_pedidos,
+    ...pedidosMesa.flatMap(p => p.detalle_pedidos || []),
+  ];
 
   return (
     <>
@@ -359,15 +400,15 @@ const OrderTrackingPage = () => {
           </div>
         )}
 
-        {/* ── Resumen del pedido ── */}
+        {/* ── Resumen del pedido (todos los pedidos activos de la mesa) ── */}
         <div style={styles.resumen}>
           <h3 style={styles.resumenTitulo}>Resumen del Pedido</h3>
-          {pedido.detalle_pedidos.map((detalle, i) => (
+          {todosLosDetalles.map((detalle, i) => (
             <div
-              key={i}
+              key={detalle.id_detalle ?? i}
               style={{
                 ...styles.resumenItem,
-                ...(i < pedido.detalle_pedidos.length - 1 ? { borderBottom: '1px solid #2A2A2A' } : {}),
+                ...(i < todosLosDetalles.length - 1 ? { borderBottom: '1px solid #2A2A2A' } : {}),
               }}
             >
               <div style={styles.resumenItemRow}>
