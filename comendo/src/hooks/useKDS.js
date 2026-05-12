@@ -44,6 +44,7 @@ const useKDS = () => {
     if (error) {
       setError(error.message);
     } else {
+      console.log('Pedidos KDS:', JSON.stringify(data, null, 2));
       const ahora = new Date();
       const pedidosFiltrados = data.filter((p) => {
         if (p.estado_actual !== 'Listo') return true;

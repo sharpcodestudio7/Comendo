@@ -147,7 +147,10 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
       </div>
 
       <div style={styles.productoLista}>
-        {pedido.detalle_pedidos.map((detalle, i) => {
+        {!(pedido.detalle_pedidos?.length) && (
+          <p style={{ color: '#666', fontSize: '13px', fontStyle: 'italic' }}>Sin detalles — verifica permisos RLS</p>
+        )}
+        {(pedido.detalle_pedidos ?? []).map((detalle, i) => {
           const exclusiones = detalle.exclusiones_pedido || [];
           const notas = detalle.notas;
 

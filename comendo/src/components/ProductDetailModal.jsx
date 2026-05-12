@@ -159,12 +159,14 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
             <button style={{ ...styles.btnContador, ...styles.btnContadorMas }} onClick={() => setCantidad((c) => c + 1)}>+</button>
           </div>
 
-          {/* Botón agregar */}
+        </div>
+
+        <div style={styles.btnFooter}>
           <button className="btn-pedido" style={styles.btnAgregar} onClick={handleAgregar}>
             Añadir al pedido — {formatearPrecio(producto.precio * cantidad)}
           </button>
-
         </div>
+
       </div>
     </>
   );
@@ -186,9 +188,11 @@ const styles = {
     maxWidth: '480px',
     backgroundColor: '#1A1A1A',
     borderRadius: '20px 20px 0 0',
-    maxHeight: '92vh',
-    overflowY: 'auto',
+    maxHeight: '90vh',
     zIndex: 201,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
   },
 
   /* Botón cerrar */
@@ -216,7 +220,7 @@ const styles = {
   heroContainer: {
     position: 'relative',
     width: '100%',
-    height: '280px',
+    height: '200px',
     overflow: 'hidden',
     borderRadius: '20px 20px 0 0',
     flexShrink: 0,
@@ -263,7 +267,12 @@ const styles = {
   },
 
   /* Contenido */
-  contenido: { padding: '16px 20px 36px' },
+  contenido: {
+    flex: 1,
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    padding: '16px 20px 8px',
+  },
   descripcion: { margin: '0', fontSize: '14px', color: '#999', lineHeight: '1.55' },
   divider: { height: '1px', backgroundColor: '#333', margin: '14px 0' },
   seccion: { marginBottom: '4px' },
@@ -352,6 +361,13 @@ const styles = {
     textAlign: 'center',
   },
 
+  btnFooter: {
+    flexShrink: 0,
+    padding: '12px 20px',
+    paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+    borderTop: '1px solid #333',
+    backgroundColor: '#1A1A1A',
+  },
   /* Botón agregar */
   btnAgregar: {
     width: '100%',
@@ -363,6 +379,7 @@ const styles = {
     fontWeight: '700',
     fontSize: '16px',
     cursor: 'pointer',
+    minHeight: '52px',
   },
 };
 

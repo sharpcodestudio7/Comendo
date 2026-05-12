@@ -418,7 +418,10 @@ const styles = {
   cantidad: { fontSize: '16px', fontWeight: '700', color: '#FFFFFF', minWidth: '20px', textAlign: 'center' },
   btnEliminar: { background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', marginLeft: 'auto', padding: '8px', borderRadius: '8px' },
   footer: {
-    padding: '14px 16px 20px',
+    paddingTop: '14px',
+    paddingLeft: '16px',
+    paddingRight: '16px',
+    paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
     borderTop: '1px solid #333',
     display: 'flex',
     flexDirection: 'column',
