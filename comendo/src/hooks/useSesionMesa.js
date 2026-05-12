@@ -6,6 +6,7 @@ const STORAGE_PREFIX = 'comendo_session_';
 const useSesionMesa = (mesaId) => {
   const [esDueno, setEsDueno] = useState(false);
   const [cargando, setCargando] = useState(true);
+  const [numeroMesa, setNumeroMesa] = useState(null);
 
   useEffect(() => {
     if (!mesaId) {
@@ -18,7 +19,7 @@ const useSesionMesa = (mesaId) => {
 
       const { data: mesa } = await supabase
         .from('mesas')
-        .select('token_sesion_actual')
+        .select('token_sesion_actual, numero')
         .eq('id_mesa', mesaId)
         .single();
 
@@ -26,6 +27,7 @@ const useSesionMesa = (mesaId) => {
         setCargando(false);
         return;
       }
+      setNumeroMesa(mesa.numero);
 
       // Este dispositivo ya es dueño (mismo token en DB y localStorage)
       if (mesa.token_sesion_actual && tokenLocal === mesa.token_sesion_actual) {
@@ -66,7 +68,7 @@ const useSesionMesa = (mesaId) => {
     reclamarSesion();
   }, [mesaId]);
 
-  return { esDueno, cargando };
+  return { esDueno, cargando, numeroMesa };
 };
 
 export default useSesionMesa;

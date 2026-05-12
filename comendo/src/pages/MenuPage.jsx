@@ -122,7 +122,7 @@ const MenuPage = () => {
   const { mesaId } = useParams();
   const { categorias, productos, cargando, error } = useMenu();
   const { pedidoActivo, refrescar: refrescarPedido } = useActivePedido(mesaId);
-  const { esDueno, cargando: cargandoSesion } = useSesionMesa(mesaId);
+  const { esDueno, cargando: cargandoSesion, numeroMesa } = useSesionMesa(mesaId);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [transicionCategoria, setTransicionCategoria] = useState(false);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
@@ -222,7 +222,7 @@ const MenuPage = () => {
               <p style={styles.restauranteSubtitulo}>— Comendo —</p>
             </div>
           </div>
-          {mesaId && <div style={styles.mesaBadge}><span style={styles.mesaBadgeTexto}>Mesa {mesaId}</span></div>}
+          {mesaId && numeroMesa && <div style={styles.mesaBadge}><span style={styles.mesaBadgeTexto}>Mesa {numeroMesa}</span></div>}
         </header>
 
         {soloLectura && (
@@ -369,14 +369,14 @@ const styles = {
     opacity: 0.75,
   },
   mesaBadge: {
-    backgroundColor: '#1A1A1A',
-    border: '1px solid #333',
-    borderRadius: '8px',
-    padding: '4px 10px',
+    backgroundColor: 'rgba(184,115,51,0.15)',
+    border: '1px solid #B87333',
+    borderRadius: '20px',
+    padding: '4px 12px',
   },
   mesaBadgeTexto: {
-    fontSize: '12px',
-    color: '#999',
+    fontSize: '13px',
+    color: '#B87333',
     fontWeight: '600',
   },
   bannerSoloLectura: {

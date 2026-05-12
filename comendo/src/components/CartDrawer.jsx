@@ -162,9 +162,7 @@ const CartDrawer = ({ abierto, onCerrar, mesaId, pedidoActivo, onPedidoCreado })
             <span style={{ fontSize: '18px' }}>⚡</span>
             <div>
               <p style={styles.bannerTitulo}>Mesa con pedido activo</p>
-              <p style={styles.bannerSub}>
-                #{pedidoActivo.id_pedido.slice(0, 6).toUpperCase()} · {pedidoActivo.estado_actual}
-              </p>
+              <p style={styles.bannerSub}>Estado: {pedidoActivo.estado_actual}</p>
             </div>
           </div>
         )}
