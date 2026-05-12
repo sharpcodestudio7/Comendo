@@ -128,11 +128,25 @@ const CartDrawer = ({ abierto, onCerrar, mesaId, pedidoActivo, onPedidoCreado })
         .btn-qty-cart:active {
           transform: scale(0.9);
         }
+        @keyframes slideInRight {
+          from { transform: translateX(100%); }
+          to   { transform: translateX(0);    }
+        }
+        @keyframes fadeInOverlay {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .cart-drawer-slide {
+          animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .cart-overlay-fade {
+          animation: fadeInOverlay 0.25s ease-out;
+        }
       `}</style>
 
-      <div style={styles.overlay} onClick={onCerrar} />
+      <div className="cart-overlay-fade" style={styles.overlay} onClick={onCerrar} />
 
-      <div style={styles.drawer}>
+      <div className="cart-drawer-slide" style={styles.drawer}>
         {/* Indicador de swipe */}
         <div style={styles.swipeIndicador} />
 

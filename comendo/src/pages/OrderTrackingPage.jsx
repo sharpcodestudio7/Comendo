@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../api/supabase';
+import PageTransition from '../components/PageTransition';
 
 const TRACKING_CSS = `
   @keyframes pulseRing {
@@ -272,6 +273,7 @@ const OrderTrackingPage = () => {
         </>
       )}
 
+      <PageTransition>
       <div className="tracking-container" style={styles.pagina}>
 
         {/* ── Header ── */}
@@ -415,6 +417,7 @@ const OrderTrackingPage = () => {
         )}
 
       </div>
+      </PageTransition>
     </>
   );
 };

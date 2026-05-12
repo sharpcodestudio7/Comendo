@@ -8,6 +8,7 @@ import useSesionMesa from '../hooks/useSesionMesa';
 import ProductCard from '../components/ProductCard';
 import CartDrawer from '../components/CartDrawer';
 import SkeletonCard from '../components/SkeletonCard';
+import PageTransition from '../components/PageTransition';
 
 const CATEGORIA_CSS = `
   @property --angle {
@@ -95,6 +96,7 @@ const MenuPage = () => {
   const { pedidoActivo, refrescar: refrescarPedido } = useActivePedido(mesaId);
   const { esDueno, cargando: cargandoSesion } = useSesionMesa(mesaId);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
+  const [transicionCategoria, setTransicionCategoria] = useState(false);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
   const [tabActiva, setTabActiva] = useState('menu');
   const totalItems = useCartStore((s) => s.totalItems());
@@ -113,6 +115,12 @@ const MenuPage = () => {
     return coincideCategoria && coincideBusqueda;
   });
 
+  const cambiarCategoria = (cat) => {
+    setTransicionCategoria(true);
+    setCategoriaActiva(cat);
+    setTimeout(() => setTransicionCategoria(false), 50);
+  };
+
   const abrirCarrito = () => {
     setCarritoAbierto(true);
     setTabActiva('pedido');
@@ -124,6 +132,7 @@ const MenuPage = () => {
   };
 
   if (cargando) return (
+    <PageTransition>
     <div style={styles.pagina}>
       <header style={styles.header}>
         <div style={styles.headerLogo}>
@@ -152,6 +161,7 @@ const MenuPage = () => {
         <button style={styles.navItem}><ShoppingBag size={22} color="#666" /><span style={styles.navLabel}>Mi Pedido</span></button>
       </nav>
     </div>
+    </PageTransition>
   );
 
   if (error) return (
@@ -161,7 +171,7 @@ const MenuPage = () => {
   );
 
   return (
-    <>
+    <PageTransition>
       <style>{CATEGORIA_CSS}</style>
 
       <div style={styles.pagina}>
@@ -206,13 +216,13 @@ const MenuPage = () => {
               <button
                 key={cat}
                 style={styles.filtroActivo}
-                onClick={() => setCategoriaActiva(cat)}
+                onClick={() => cambiarCategoria(cat)}
               >
                 {cat}
               </button>
             ) : (
               <div key={cat} className="categoria-border-glow">
-                <button className="categoria-inner" onClick={() => setCategoriaActiva(cat)}>
+                <button className="categoria-inner" onClick={() => cambiarCategoria(cat)}>
                   {cat}
                 </button>
               </div>
@@ -221,17 +231,23 @@ const MenuPage = () => {
         </div>
 
         <div style={styles.lista}>
-          {productosFiltrados.length === 0 ? (
-            <p style={styles.sinResultados}>No se encontraron productos</p>
-          ) : (
-            productosFiltrados.map((producto) => (
-              <ProductCard
-                key={producto.id_producto}
-                producto={producto}
-                soloLectura={soloLectura || cargandoSesion}
-              />
-            ))
-          )}
+          <div style={{
+            opacity: transicionCategoria ? 0 : 1,
+            transform: transicionCategoria ? 'translateY(8px)' : 'translateY(0)',
+            transition: 'opacity 0.3s ease, transform 0.3s ease',
+          }}>
+            {productosFiltrados.length === 0 ? (
+              <p style={styles.sinResultados}>No se encontraron productos</p>
+            ) : (
+              productosFiltrados.map((producto) => (
+                <ProductCard
+                  key={producto.id_producto}
+                  producto={producto}
+                  soloLectura={soloLectura || cargandoSesion}
+                />
+              ))
+            )}
+          </div>
         </div>
 
         {!soloLectura && (
@@ -262,7 +278,7 @@ const MenuPage = () => {
 
         </nav>
       </div>
-    </>
+    </PageTransition>
   );
 };
 

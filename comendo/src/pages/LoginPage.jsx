@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../api/supabase';
 import { UtensilsCrossed } from 'lucide-react';
+import PageTransition from '../components/PageTransition';
 
 const LOGIN_CSS = `
   .btn-login {
@@ -78,7 +79,7 @@ const LoginPage = () => {
   };
 
   return (
-    <>
+    <PageTransition>
       <style>{LOGIN_CSS}</style>
 
       <div style={styles.pagina}>
@@ -141,7 +142,7 @@ const LoginPage = () => {
 
         </div>
       </div>
-    </>
+    </PageTransition>
   );
 };
 

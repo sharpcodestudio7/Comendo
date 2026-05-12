@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { UtensilsCrossed } from 'lucide-react';
+import PageTransition from '../components/PageTransition';
 
 const LANDING_CSS = `
   @keyframes fadeInUpLanding {
@@ -52,7 +53,7 @@ const LandingPage = () => {
   const irAlMenu = () => navigate(`/mesa/${mesaId}/menu`);
 
   return (
-    <>
+    <PageTransition>
       <style>{LANDING_CSS}</style>
 
       <section style={styles.hero}>
@@ -86,7 +87,7 @@ const LandingPage = () => {
           </button>
         </div>
       </section>
-    </>
+    </PageTransition>
   );
 };
 
