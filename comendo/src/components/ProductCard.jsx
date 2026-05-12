@@ -5,6 +5,7 @@ import ProductDetailModal from './ProductDetailModal';
 const ProductCard = ({ producto, soloLectura = false }) => {
   const { items, agregarItem, quitarItem } = useCartStore();
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [imgCargada, setImgCargada] = useState(false);
   const itemEnCarrito = items.find((i) => i.producto.id_producto === producto.id_producto);
   const cantidad = itemEnCarrito ? itemEnCarrito.cantidad : 0;
 
@@ -17,7 +18,18 @@ const ProductCard = ({ producto, soloLectura = false }) => {
     <>
       <div style={styles.card}>
         {producto.imagen_url ? (
-          <img src={producto.imagen_url} alt={producto.nombre} style={styles.imagen} />
+          <div style={styles.imagenWrapper}>
+            {!imgCargada && (
+              <div className="skeleton-bone" style={{ position: 'absolute', inset: 0 }} />
+            )}
+            <img
+              src={producto.imagen_url}
+              alt={producto.nombre}
+              loading="lazy"
+              onLoad={() => setImgCargada(true)}
+              style={{ ...styles.imagen, opacity: imgCargada ? 1 : 0, transition: 'opacity 0.3s ease' }}
+            />
+          </div>
         ) : (
           <div style={styles.imagenPlaceholder}>
             <span style={{ fontSize: '36px', opacity: 0.2 }}>🍽</span>
@@ -74,12 +86,18 @@ const styles = {
     flexDirection: 'row',
     overflow: 'hidden',
   },
-  imagen: {
+  imagenWrapper: {
+    position: 'relative',
     width: '140px',
     height: '140px',
-    objectFit: 'cover',
-    borderRadius: '12px 0 0 12px',
     flexShrink: 0,
+    borderRadius: '12px 0 0 12px',
+    overflow: 'hidden',
+  },
+  imagen: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
     display: 'block',
   },
   imagenPlaceholder: {

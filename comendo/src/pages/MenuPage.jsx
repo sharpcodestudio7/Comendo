@@ -141,7 +141,7 @@ const MenuPage = () => {
       </div>
       <div style={styles.filtros}>
         {[80, 95, 70, 105].map((w, i) => (
-          <div key={i} style={{ width: w, height: 32, borderRadius: 20, backgroundColor: '#1A1A1A', flexShrink: 0 }} />
+          <div key={i} className="skeleton-bone" style={{ width: w, height: 36, borderRadius: 20, flexShrink: 0 }} />
         ))}
       </div>
       <div style={styles.lista}>
