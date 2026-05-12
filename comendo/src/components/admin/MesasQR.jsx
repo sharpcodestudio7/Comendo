@@ -28,51 +28,46 @@ const MesasQR = () => {
 
   // ── Descargar QR como imagen PNG ──────────────────────────────────────
   const descargarQR = (mesaNumero, mesaId) => {
-    const svg = document.getElementById(`qr-mesa-${mesaId}`);
-    if (!svg) return;
+    return new Promise((resolve) => {
+      const svg = document.getElementById(`qr-mesa-${mesaId}`);
+      if (!svg) { resolve(); return; }
 
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement('canvas');
-    canvas.width = 300;
-    canvas.height = 340;
-    const ctx = canvas.getContext('2d');
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      canvas.width = 300;
+      canvas.height = 340;
+      const ctx = canvas.getContext('2d');
 
-    const img = new Image();
-    img.onload = () => {
-      // Fondo blanco
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 300, 340);
+      const img = new Image();
+      img.onload = () => {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 300, 340);
+        ctx.drawImage(img, 25, 20, 250, 250);
+        ctx.fillStyle = '#1a1a2e';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Mesa ${mesaNumero}`, 150, 300);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#666';
+        ctx.fillText('Escanea para ver el menú', 150, 325);
 
-      // QR centrado
-      ctx.drawImage(img, 25, 20, 250, 250);
+        const link = document.createElement('a');
+        link.download = `QR_Mesa_${mesaNumero}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        resolve();
+      };
 
-      // Texto de la mesa
-      ctx.fillStyle = '#1a1a2e';
-      ctx.font = 'bold 20px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(`Mesa ${mesaNumero}`, 150, 300);
-
-      ctx.font = '12px Arial';
-      ctx.fillStyle = '#666';
-      ctx.fillText('Escanea para ver el menú', 150, 325);
-
-      // Descarga
-      const link = document.createElement('a');
-      link.download = `QR_Mesa_${mesaNumero}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    };
-
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    });
   };
 
-  // ── Descargar todos los QR en un ZIP ──────────────────────────────────
-  const descargarTodos = () => {
-    mesas.forEach((mesa, index) => {
-      setTimeout(() => {
-        descargarQR(mesa.numero, mesa.id_mesa);
-      }, index * 500); // Descarga con delay para no saturar el navegador
-    });
+  // ── Descargar todos los QR en secuencia ───────────────────────────────
+  const descargarTodos = async () => {
+    for (const mesa of mesas) {
+      await descargarQR(mesa.numero, mesa.id_mesa);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
   };
 
   if (cargando) return <p style={{ color: '#fff' }}>Cargando mesas...</p>;
