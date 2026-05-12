@@ -6,13 +6,7 @@ import { create } from 'zustand';
 
 const useCartStore = create((set, get) => ({
   items: [],
-  // Estructura de cada item:
-  // {
-  //   producto: { id_producto, nombre, precio, ... },
-  //   cantidad: 1,
-  //   exclusiones: [{ id_insumo, nombre, cantidad_requerida, unidad_medida }],
-  //   notas: ''
-  // }
+  cartAnimationTrigger: 0,
 
   agregarItem: (producto) => {
     const { items } = get();
@@ -24,10 +18,10 @@ const useCartStore = create((set, get) => ({
             ? { ...i, cantidad: i.cantidad + 1 }
             : i
         ),
+        cartAnimationTrigger: get().cartAnimationTrigger + 1,
       });
     } else {
-      // Al agregar por primera vez, inicializa exclusiones vacías y notas vacías
-      set({ items: [...items, { producto, cantidad: 1, exclusiones: [], notas: '' }] });
+      set({ items: [...items, { producto, cantidad: 1, exclusiones: [], notas: '' }], cartAnimationTrigger: get().cartAnimationTrigger + 1 });
     }
   },
 

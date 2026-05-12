@@ -6,6 +6,7 @@ const ProductCard = ({ producto, soloLectura = false }) => {
   const { items, agregarItem, quitarItem } = useCartStore();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [imgCargada, setImgCargada] = useState(false);
+  const [flashBtn, setFlashBtn] = useState(false);
   const itemEnCarrito = items.find((i) => i.producto.id_producto === producto.id_producto);
   const cantidad = itemEnCarrito ? itemEnCarrito.cantidad : 0;
 
@@ -50,9 +51,13 @@ const ProductCard = ({ producto, soloLectura = false }) => {
               <button style={styles.btnSoloLectura} disabled>Solo vista</button>
             ) : cantidad === 0 ? (
               <button
-                className="btn-agregar"
+                className={`btn-agregar${flashBtn ? ' btn-agregar-flash' : ''}`}
                 style={styles.btnAgregar}
-                onClick={() => setModalAbierto(true)}
+                onClick={() => {
+                  setModalAbierto(true);
+                  setFlashBtn(true);
+                  setTimeout(() => setFlashBtn(false), 300);
+                }}
               >
                 Agregar
               </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Search, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import useMenu from '../hooks/useMenu';
@@ -11,6 +11,34 @@ import SkeletonCard from '../components/SkeletonCard';
 import PageTransition from '../components/PageTransition';
 
 const CATEGORIA_CSS = `
+  .cart-bounce {
+    animation: cartBounceAnim 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  }
+  @keyframes cartBounceAnim {
+    0%   { transform: scale(1); }
+    20%  { transform: scale(1.3) rotate(-5deg); }
+    40%  { transform: scale(0.9) rotate(3deg); }
+    60%  { transform: scale(1.15) rotate(-2deg); }
+    80%  { transform: scale(0.95); }
+    100% { transform: scale(1) rotate(0); }
+  }
+  .cart-counter-pop {
+    animation: counterPop 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  }
+  @keyframes counterPop {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.6); background-color: #D4922A; }
+    60%  { transform: scale(0.8); }
+    100% { transform: scale(1); background-color: #B87333; }
+  }
+  .btn-agregar-flash {
+    animation: agregarFlash 0.3s ease-out;
+  }
+  @keyframes agregarFlash {
+    0%   { box-shadow: 0 0 0 0 rgba(184, 115, 51, 0.6); }
+    50%  { box-shadow: 0 0 0 8px rgba(184, 115, 51, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(184, 115, 51, 0); }
+  }
   @property --angle {
     syntax: '<angle>';
     initial-value: 0deg;
@@ -100,9 +128,20 @@ const MenuPage = () => {
   const [carritoAbierto, setCarritoAbierto] = useState(false);
   const [tabActiva, setTabActiva] = useState('menu');
   const totalItems = useCartStore((s) => s.totalItems());
+  const cartAnimationTrigger = useCartStore((s) => s.cartAnimationTrigger);
+  const [cartBounce, setCartBounce] = useState(false);
   const [busqueda, setBusqueda] = useState('');
 
   const soloLectura = !!mesaId && !cargandoSesion && !esDueno;
+
+  const triggerCartBounce = useCallback(() => {
+    setCartBounce(true);
+    setTimeout(() => setCartBounce(false), 600);
+  }, []);
+
+  useEffect(() => {
+    if (cartAnimationTrigger > 0) triggerCartBounce();
+  }, [cartAnimationTrigger]);
 
   useEffect(() => {
     document.body.style.backgroundColor = '#0D0D0D';
@@ -267,9 +306,9 @@ const MenuPage = () => {
           </button>
 
           <button style={styles.navItem} onClick={soloLectura ? undefined : abrirCarrito}>
-            <div style={styles.navCartWrapper}>
+            <div className={cartBounce ? 'cart-bounce' : ''} style={styles.navCartWrapper}>
               <ShoppingBag size={22} color={tabActiva === 'pedido' ? '#C8A84E' : (soloLectura ? '#444' : '#666')} />
-              {!soloLectura && totalItems > 0 && <span style={styles.navBadge}>{totalItems}</span>}
+              {!soloLectura && totalItems > 0 && <span className={cartBounce ? 'cart-counter-pop' : ''} style={styles.navBadge}>{totalItems}</span>}
             </div>
             <span style={{ ...styles.navLabel, ...(tabActiva === 'pedido' ? styles.navLabelActivo : {}), ...(soloLectura ? { color: '#444' } : {}) }}>
               Mi Pedido
