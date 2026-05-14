@@ -51,13 +51,15 @@ comendo/
 │   │   ├── ProductCard.jsx       # Tarjeta de producto en el menú
 │   │   ├── ProductDetailModal.jsx # Modal para personalizar pedido
 │   │   ├── ModalConfirm.jsx      # Modal genérico de confirmación
+│   │   ├── PageTransition.jsx    # Wrapper de transición de entrada entre páginas
 │   │   ├── SkeletonCard.jsx      # Skeleton loader
 │   │   ├── ProtectedRoute.jsx    # Protege rutas de Admin
 │   │   └── ProtectedKDS.jsx      # Protege rutas de Cocina
 │   ├── hooks/
 │   │   ├── useMenu.js            # Carga categorías y productos desde Supabase
 │   │   ├── useKDS.js             # Estado del KDS + Realtime
-│   │   ├── useActivePedido.js    # Detecta si la mesa tiene pedido activo
+│   │   ├── useActivePedido.js    # Detecta pedido activo de la mesa (Recibido/Preparando/Listo/Entregado)
+│   │   ├── useSesionMesa.js      # Gestiona token de sesión de mesa + retorna numero de mesa
 │   │   └── useKDSSound.js        # Alertas sonoras con Web Audio API
 │   ├── pages/
 │   │   ├── MenuPage.jsx          # Vista del comensal
@@ -76,6 +78,7 @@ comendo/
 │   └── sw.js                     # Service Worker
 ├── index.html
 ├── vite.config.js
+├── vercel.json                       # Rewrites SPA para Vercel
 └── package.json
 ```
 
@@ -114,7 +117,7 @@ comendo/
 `Recibido → Preparando → Listo → Entregado → Pagado`
 
 ### Método de pago
-`efectivo | nequi | daviplata`
+`efectivo | tarjeta`
 
 ---
 
@@ -126,11 +129,26 @@ Al crear o agregar items a un pedido, `orderService.js` descuenta insumos del st
 ### Auto-asignación de mesero
 Cuando un pedido cambia a estado "Listo", `meseroService.js` asigna automáticamente el mesero con menor carga de pedidos pendientes.
 
+### Solicitar la cuenta
+Cuando el comensal solicita la cuenta en `OrderTrackingPage`, se cierran **todos** los pedidos activos de la mesa (no solo el del URL) consultando por `id_mesa` con `.in('estado_actual', ['Recibido','Preparando','Listo','Entregado'])`. Luego se libera la mesa (`estado: 'Libre', token_sesion_actual: null`).
+
+### Sesión de mesa
+`useSesionMesa` gestiona el token UUID en localStorage para determinar qué dispositivo es "dueño" de la sesión. También retorna `numeroMesa` (número visible, no UUID) obtenido en la misma query. El badge en MenuPage siempre muestra `Mesa {numero}`, nunca el UUID.
+
+### Carrito y animaciones
+`useCartStore` tiene el campo `cartAnimationTrigger` (entero) que se incrementa en cada `agregarItem`. `MenuPage` lo escucha con `useEffect` para disparar el bounce del ícono del carrito en la barra inferior.
+
 ### Realtime
 Las páginas KDS, OrderTracking y Mesero usan Supabase Realtime (canales PostgreSQL) para actualizar el estado sin recarga.
 
 ### Alertas sonoras en cocina
 `useKDSSound.js` usa la Web Audio API para emitir beeps al recibir nuevos pedidos o detectar pedidos urgentes (más de 15 minutos).
+
+### iOS / Mobile
+- Siempre usar `WebkitOverflowScrolling: 'touch'` en contenedores con `overflowY: auto`
+- `env(safe-area-inset-bottom)` en `paddingBottom` de barras fijas inferiores (bottomNav, CartDrawer footer, ProductDetailModal footer)
+- Botones de acción principales fuera del área de scroll (footer con `flexShrink: 0`)
+- Mínimo 44px de alto en botones tocables
 
 ---
 
@@ -172,5 +190,6 @@ npm run lint     # Linter ESLint
 - Restaurante: **Mr. Arroz Paisa**
 - Flujo principal: Comensal escanea QR → hace pedido → cocina lo prepara → mesero lo entrega
 - Impoconsumo: 8% calculado en CartDrawer sobre el subtotal
-- Métodos de pago: Efectivo, Nequi, Daviplata
+- Métodos de pago: Efectivo, Tarjeta
 - Meseros se identifican con localStorage (sin login formal)
+- Deploy: Vercel (SPA con rewrites en `vercel.json`)
