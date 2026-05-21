@@ -26,7 +26,7 @@ const MonitorMesas = () => {
   const cargarDatos = async () => {
     setCargando(true);
     const [{ data: mesasData }, { data: pedidosData }] = await Promise.all([
-      supabase.from('mesas').select('*').order('numero'),
+      supabase.from('mesas').select('*').eq('status_', 1).order('numero'),
       supabase
         .from('pedidos')
         .select(`

@@ -269,11 +269,15 @@ const OrderTrackingPage = () => {
   );
   if (!pedido) return null;
 
+  const formatCOP = (valor) =>
+    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor);
+
   const pasoActual = PASOS.findIndex((p) => p.estado === pedido.estado_actual);
   const todosLosDetalles = [
     ...pedido.detalle_pedidos,
     ...pedidosMesa.flatMap(p => p.detalle_pedidos || []),
   ];
+  const totalMesa = [pedido, ...pedidosMesa].reduce((acc, p) => acc + (p.total || 0), 0);
 
   return (
     <>
@@ -290,19 +294,46 @@ const OrderTrackingPage = () => {
         </div>
       )}
 
-      {/* ── Modal de confirmación ── */}
+      {/* ── Modal de confirmación con resumen ── */}
       {modalConfirm && (
         <>
           <div style={styles.modalOverlay} onClick={() => setModalConfirm(false)} />
           <div className="modal-confirmar" style={styles.modalContenedor}>
-            <p style={styles.modalTitulo}>¿Deseas solicitar la cuenta?</p>
-            <p style={styles.modalSubtexto}>Se cerrará tu sesión en esta mesa</p>
+            <p style={styles.modalTitulo}>Resumen de tu cuenta</p>
+
+            {/* Lista de ítems */}
+            <div style={styles.modalLista}>
+              {todosLosDetalles.map((detalle, i) => (
+                <div key={detalle.id_detalle ?? i} style={styles.modalItem}>
+                  <div style={styles.modalItemFila}>
+                    <span style={styles.modalItemNombre}>{detalle.productos.nombre}</span>
+                    <span style={styles.modalItemCantidad}>{detalle.cantidad}x</span>
+                  </div>
+                  {detalle.exclusiones_pedido?.length > 0 && (
+                    <p style={styles.modalItemExclusiones}>
+                      SIN: {detalle.exclusiones_pedido.map((e) => e.nombre_insumo).join(', ')}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Total */}
+            <div style={styles.modalTotalFila}>
+              <span style={styles.modalTotalLabel}>Total a pagar</span>
+              <span style={styles.modalTotalValor}>{formatCOP(totalMesa)}</span>
+            </div>
+
+            <p style={styles.modalInstruccion}>
+              💳 Acércate a la caja con este valor para realizar el pago.
+            </p>
+
             <button
               style={styles.modalBtnConfirmar}
               onClick={confirmarCuenta}
               disabled={procesando}
             >
-              Sí, solicitar cuenta
+              {procesando ? 'Procesando...' : 'Entendido, solicitar cuenta'}
             </button>
             <button
               style={styles.modalBtnCancelar}
@@ -440,12 +471,16 @@ const OrderTrackingPage = () => {
         )}
 
         {/* ── Banner cuenta solicitada ── */}
-        {pedido.estado_actual === 'Listo' && cuentaSolicitada && (
+        {cuentaSolicitada && (
           <div style={styles.cuentaBanner}>
-            <span style={{ fontSize: '28px' }}>✅</span>
-            <div>
+            <span style={{ fontSize: '32px' }}>✅</span>
+            <div style={{ flex: 1 }}>
               <p style={styles.cuentaTitulo}>¡Cuenta solicitada!</p>
-              <p style={styles.cuentaSub}>Un mesero se acercará en un momento.</p>
+              <p style={styles.cuentaSub}>Acércate a la caja para pagar.</p>
+              <div style={styles.cuentaTotalFila}>
+                <span style={styles.cuentaTotalLabel}>Total a pagar:</span>
+                <span style={styles.cuentaTotalValor}>{formatCOP(totalMesa)}</span>
+              </div>
             </div>
           </div>
         )}
@@ -697,24 +732,58 @@ const styles = {
     backgroundColor: '#1A1A1A',
     borderRadius: '16px',
     padding: '24px',
-    width: 'min(320px, 90vw)',
+    width: 'min(360px, 92vw)',
+    maxHeight: '85vh',
+    overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
+    gap: '12px',
     fontFamily: 'sans-serif',
   },
   modalTitulo: {
-    margin: '0 0 4px',
+    margin: 0,
     fontSize: '18px',
     fontWeight: 700,
     color: '#FFFFFF',
     textAlign: 'center',
   },
-  modalSubtexto: {
-    margin: '0 0 8px',
-    fontSize: '14px',
-    color: '#999999',
+  modalLista: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: '10px',
+    padding: '4px 0',
+    maxHeight: '220px',
+    overflowY: 'auto',
+  },
+  modalItem: {
+    padding: '10px 14px',
+    borderBottom: '1px solid #333',
+  },
+  modalItemFila: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  modalItemNombre: { fontSize: '14px', color: '#FFFFFF', fontWeight: '500' },
+  modalItemCantidad: { fontSize: '14px', color: '#B87333', fontWeight: '700', flexShrink: 0 },
+  modalItemExclusiones: { margin: '4px 0 0', fontSize: '11px', color: '#ef5350' },
+  modalTotalFila: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(184,115,51,0.1)',
+    border: '1px solid rgba(184,115,51,0.3)',
+    borderRadius: '10px',
+    padding: '12px 14px',
+  },
+  modalTotalLabel: { fontSize: '15px', fontWeight: '600', color: '#CCCCCC' },
+  modalTotalValor: { fontSize: '20px', fontWeight: '700', color: '#B87333' },
+  modalInstruccion: {
+    margin: 0,
+    fontSize: '13px',
+    color: '#999',
     textAlign: 'center',
+    lineHeight: 1.5,
   },
   modalBtnConfirmar: {
     width: '100%',
@@ -742,7 +811,7 @@ const styles = {
   // Cuenta solicitada
   cuentaBanner: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: '12px',
     backgroundColor: 'rgba(59,130,46,0.1)',
     border: '1px solid rgba(59,130,46,0.35)',
@@ -752,6 +821,14 @@ const styles = {
   },
   cuentaTitulo: { margin: 0, fontWeight: '700', color: '#4caf50', fontSize: '15px' },
   cuentaSub: { margin: '4px 0 0', color: '#999', fontSize: '13px' },
+  cuentaTotalFila: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginTop: '8px',
+  },
+  cuentaTotalLabel: { fontSize: '13px', color: '#999' },
+  cuentaTotalValor: { fontSize: '18px', fontWeight: '700', color: '#B87333' },
 };
 
 export default OrderTrackingPage;

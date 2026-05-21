@@ -122,7 +122,7 @@ const MenuPage = () => {
   const { mesaId } = useParams();
   const { categorias, productos, cargando, error } = useMenu();
   const { pedidoActivo, refrescar: refrescarPedido } = useActivePedido(mesaId);
-  const { esDueno, cargando: cargandoSesion, numeroMesa } = useSesionMesa(mesaId);
+  const { esDueno, cargando: cargandoSesion, numeroMesa, sesionExpirada } = useSesionMesa(mesaId);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [transicionCategoria, setTransicionCategoria] = useState(false);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
@@ -169,6 +169,32 @@ const MenuPage = () => {
     setCarritoAbierto(false);
     setTabActiva('menu');
   };
+
+  if (sesionExpirada) return (
+    <PageTransition>
+      <div style={styles.pagina}>
+        <header style={styles.header}>
+          <div style={styles.headerLogo}>
+            <div style={styles.logoIcono}><UtensilsCrossed size={22} color="#C8A84E" /></div>
+            <div>
+              <h1 style={styles.restauranteNombre}>Mr. Arroz Paisa</h1>
+              <p style={styles.restauranteSubtitulo}>— Comendo —</p>
+            </div>
+          </div>
+        </header>
+        <div style={styles.expiradoContainer}>
+          <div style={styles.expiradoIcono}>⏱️</div>
+          <h2 style={styles.expiradoTitulo}>Sesión expirada</h2>
+          <p style={styles.expiradoMensaje}>
+            Tu sesión de 10 minutos finalizó sin que se realizara un pedido.
+          </p>
+          <p style={styles.expiradoInstruccion}>
+            Escanea nuevamente el código QR de la mesa para continuar.
+          </p>
+        </div>
+      </div>
+    </PageTransition>
+  );
 
   if (cargando) return (
     <PageTransition>
@@ -507,6 +533,45 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '0 3px',
+  },
+  expiradoContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '70vh',
+    padding: '0 32px',
+    textAlign: 'center',
+    gap: '16px',
+  },
+  expiradoIcono: {
+    fontSize: '56px',
+    lineHeight: 1,
+  },
+  expiradoTitulo: {
+    margin: 0,
+    fontSize: '22px',
+    fontWeight: '700',
+    color: '#C8A84E',
+    fontFamily: 'Georgia, serif',
+    fontStyle: 'italic',
+  },
+  expiradoMensaje: {
+    margin: 0,
+    fontSize: '15px',
+    color: '#AAAAAA',
+    lineHeight: 1.5,
+  },
+  expiradoInstruccion: {
+    margin: 0,
+    fontSize: '14px',
+    color: '#B87333',
+    fontWeight: '600',
+    lineHeight: 1.5,
+    backgroundColor: 'rgba(184,115,51,0.1)',
+    border: '1px solid rgba(184,115,51,0.3)',
+    borderRadius: '12px',
+    padding: '12px 16px',
   },
 };
 

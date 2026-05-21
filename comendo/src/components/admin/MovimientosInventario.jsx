@@ -25,17 +25,14 @@ const MovimientosInventario = () => {
 
   const cargarDatos = async () => {
     setCargando(true);
-    const [{ data: ins, error: errIns }, { data: movs, error: errMovs }] = await Promise.all([
-      supabase.from('insumos').select('*').order('nombre'),
+    const [{ data: ins }, { data: movs }] = await Promise.all([
+      supabase.from('insumos').select('*').eq('status_', 1).order('nombre'),
       supabase
         .from('movimientos_inventario')
         .select(`*, insumos ( nombre, unidad_medida )`)
         .order('fecha', { ascending: false })
         .limit(100),
     ]);
-
-    console.log('Insumos:', ins, 'Error insumos:', errIns);
-    console.log('Movimientos:', movs, 'Error movimientos:', errMovs);
 
     setInsumos(ins || []);
     setMovimientos(movs || []);
@@ -133,8 +130,6 @@ const MovimientosInventario = () => {
     const coincideTipo = !filtroTipo || m.tipo === filtroTipo;
     return coincideInsumo && coincideTipo;
   });
-
-  console.log('Renderizando — cargando:', cargando, '| insumos:', insumos.length);
 
   if (cargando) return <p style={{ color: '#fff', padding: '20px' }}>Cargando movimientos...</p>;
 
