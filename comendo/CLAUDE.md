@@ -21,7 +21,7 @@ Siempre responde en **español**. Toda comunicación, explicaciones, comentarios
 | Routing | React Router v7 |
 | Iconos | Lucide React |
 | Estilos | CSS-in-JS (estilos inline en los componentes) |
-| Exportación | xlsx + file-saver |
+| Exportación | xlsx + file-saver + jszip |
 | QR | qrcode.react |
 | PWA | manifest.json + Service Worker |
 
@@ -103,7 +103,7 @@ comendo/
 ### Tablas principales
 
 - **usuarios** — id_usuario, email, nombre, rol (Administrador / Operario_Cocina / Mesero)
-- **mesas** — id_mesa, numero, estado (Libre / Ocupada / Por_Pagar), token_sesion_actual
+- **mesas** — id_mesa, numero, estado (Libre / Ocupada / Por_Pagar), token_sesion_actual, token_creado_en, status_
 - **categorias** — id_categoria, nombre
 - **productos** — id_producto, id_categoria, nombre, descripcion, precio, disponible, imagen_url
 - **pedidos** — id_pedido, id_mesa, id_mesero, estado_actual, total, metodo_pago, fecha_creacion, fecha_listo
@@ -117,7 +117,7 @@ comendo/
 `Recibido → Preparando → Listo → Entregado → Pagado`
 
 ### Método de pago
-`efectivo | tarjeta`
+`efectivo | nequi | daviplata`
 
 ---
 
@@ -130,10 +130,24 @@ Al crear o agregar items a un pedido, `orderService.js` descuenta insumos del st
 Cuando un pedido cambia a estado "Listo", `meseroService.js` asigna automáticamente el mesero con menor carga de pedidos pendientes.
 
 ### Solicitar la cuenta
-Cuando el comensal solicita la cuenta en `OrderTrackingPage`, se cierran **todos** los pedidos activos de la mesa (no solo el del URL) consultando por `id_mesa` con `.in('estado_actual', ['Recibido','Preparando','Listo','Entregado'])`. Luego se libera la mesa (`estado: 'Libre', token_sesion_actual: null`).
+Cuando el comensal solicita la cuenta en `OrderTrackingPage`, el modal muestra el resumen completo de ítems pedidos (de todos los pedidos activos de la mesa) y el **total a pagar** antes de confirmar. Al confirmar se cierran **todos** los pedidos activos de la mesa consultando por `id_mesa` con `.in('estado_actual', ['Recibido','Preparando','Listo','Entregado'])`. Luego se libera la mesa (`estado: 'Libre', token_sesion_actual: null`). El banner post-confirmación también muestra el total para que el cliente lo lleve a la caja.
 
-### Sesión de mesa
-`useSesionMesa` gestiona el token UUID en localStorage para determinar qué dispositivo es "dueño" de la sesión. También retorna `numeroMesa` (número visible, no UUID) obtenido en la misma query. El badge en MenuPage siempre muestra `Mesa {numero}`, nunca el UUID.
+### Sesión de mesa y expiración de token QR
+`useSesionMesa` gestiona el token UUID en localStorage para determinar qué dispositivo es "dueño" de la sesión. Retorna `esDueno`, `numeroMesa`, `cargando` y `sesionExpirada`.
+
+- Al reclamar sesión nueva guarda `token_creado_en` en la DB y la expiración en `comendo_session_expiry_<mesaId>` (localStorage, ahora + 10 min).
+- Un intervalo de 30 seg verifica si el token venció sin que se haya montado un pedido. Si venció: limpia localStorage + pone `token_sesion_actual = null` y `token_creado_en = null` en DB → activa `sesionExpirada`.
+- Si ya hay pedido activo al momento de la verificación, elimina la clave de expiración y la sesión continúa indefinidamente.
+- En Supabase hay un job de `pg_cron` (cada minuto) con la función `limpiar_tokens_expirados()` que limpia tokens cuyo `token_creado_en` tenga más de 10 min y la mesa no tenga pedidos activos — cubre el caso de browsers cerrados antes de expirar.
+- Cuando `sesionExpirada = true`, `MenuPage` muestra una pantalla completa indicando que deben re-escanear el QR.
+
+### Soft delete en CRUDs
+Todos los CRUDs de entidades usan la columna `status_` (integer, 1 = activo, 0 = inactivo) en lugar de `DELETE` real. Patrón:
+- Filtrar activos: `.eq('status_', 1)`
+- Eliminar: `.update({ status_: 0 })`
+- Reactivar: `.update({ status_: 1 })`
+- Cada CRUD tiene botón "Ver inactivos" y botón "Reactivar" por ítem.
+- **Excepción:** `RecetasCRUD` usa `DELETE` real porque opera sobre la tabla pivote `recetas` (relación insumo↔producto), no sobre una entidad del negocio.
 
 ### Carrito y animaciones
 `useCartStore` tiene el campo `cartAnimationTrigger` (entero) que se incrementa en cada `agregarItem`. `MenuPage` lo escucha con `useEffect` para disparar el bounce del ícono del carrito en la barra inferior.
@@ -190,6 +204,6 @@ npm run lint     # Linter ESLint
 - Restaurante: **Mr. Arroz Paisa**
 - Flujo principal: Comensal escanea QR → hace pedido → cocina lo prepara → mesero lo entrega
 - Impoconsumo: 8% calculado en CartDrawer sobre el subtotal
-- Métodos de pago: Efectivo, Tarjeta
+- Métodos de pago: Efectivo, Nequi, Daviplata
 - Meseros se identifican con localStorage (sin login formal)
 - Deploy: Vercel (SPA con rewrites en `vercel.json`)
