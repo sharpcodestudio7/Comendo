@@ -149,6 +149,25 @@ Todos los CRUDs de entidades usan la columna `status_` (integer, 1 = activo, 0 =
 - Cada CRUD tiene botón "Ver inactivos" y botón "Reactivar" por ítem.
 - **Excepción:** `RecetasCRUD` usa `DELETE` real porque opera sobre la tabla pivote `recetas` (relación insumo↔producto), no sobre una entidad del negocio.
 
+### Gestión de meseros en MeseroPage
+`MeseroPage` incluye CRUD de meseros directamente en la pantalla de selección (sin ir al admin):
+- **Crear:** botón "+ Nuevo mesero" en el footer del selector → formulario inline.
+- **Desactivar:** botón 🗑 en cada fila → abre `ModalConfirm` → `status_: 0`.
+- **Ver inactivos / Reactivar:** botón "🗂 Ver inactivos" alterna la lista; cada inactivo tiene botón "Reactivar" → `status_: 1`.
+- Función `cargarListaMeseros()` filtra por `status_` según el toggle activo.
+- `MeserosCRUD` en el admin panel mantiene la misma funcionalidad para el administrador.
+
+### Paleta de colores y tema visual
+Todo el proyecto usa **tema oscuro** con paleta dorada/cobre. Tokens principales:
+- Fondos: `#0D0D0D` (página), `#1A1A1A` (cards/superficies), `#2A2A2A` (inputs/secundario)
+- Bordes: `#333`
+- Texto: `#FFFFFF` (primario), `#AAAAAA` (secundario), `#666` (atenuado)
+- Acento dorado: `#C8A84E` (gold), `#B87333` (cobre), `#D4922A` (ámbar)
+- Rojo/danger: `#8B1A1A`
+- Tipografía branding: `Georgia, serif` italic en `#C8A84E` para títulos de marca
+- Tipografía general: `sans-serif`
+- **No usar** azules (`#1a1a2e`, `#16213e`) ni verdes (`#2D6A4F`) — son colores del tema antiguo.
+
 ### Carrito y animaciones
 `useCartStore` tiene el campo `cartAnimationTrigger` (entero) que se incrementa en cada `agregarItem`. `MenuPage` lo escucha con `useEffect` para disparar el bounce del ícono del carrito en la barra inferior.
 
