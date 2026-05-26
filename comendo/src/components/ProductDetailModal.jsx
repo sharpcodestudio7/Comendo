@@ -192,28 +192,29 @@ const styles = {
     zIndex: 201,
     display: 'flex',
     flexDirection: 'column',
-    overflow: 'hidden',
+    /* Sin overflow:hidden aquí — cada sección maneja el suyo */
   },
 
   /* Botón cerrar */
   btnCerrar: {
     position: 'absolute',
-    top: '14px',
-    right: '14px',
-    background: 'rgba(0,0,0,0.55)',
+    top: '16px',
+    right: '16px',
+    background: 'rgba(0,0,0,0.6)',
     backdropFilter: 'blur(6px)',
     WebkitBackdropFilter: 'blur(6px)',
     color: '#FFFFFF',
-    border: '1px solid rgba(255,255,255,0.12)',
+    border: '1px solid rgba(255,255,255,0.15)',
     borderRadius: '50%',
-    width: '36px',
-    height: '36px',
-    fontSize: '15px',
+    width: '34px',
+    height: '34px',
+    fontSize: '14px',
     cursor: 'pointer',
-    zIndex: 202,
+    zIndex: 203,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    lineHeight: 1,
   },
 
   /* Hero */
