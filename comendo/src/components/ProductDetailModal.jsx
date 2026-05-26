@@ -222,7 +222,7 @@ const styles = {
   heroContainer: {
     position: 'relative',
     width: '100%',
-    height: '240px',
+    height: '160px',
     overflow: 'hidden',
     borderRadius: '24px 24px 0 0',
     flexShrink: 0,
@@ -249,12 +249,12 @@ const styles = {
     bottom: 0,
     left: 0,
     right: 0,
-    padding: '20px 20px 18px',
+    padding: '14px 20px 14px',
     textAlign: 'center',
   },
   nombre: {
-    margin: '0 0 6px',
-    fontSize: '24px',
+    margin: '0 0 4px',
+    fontSize: '20px',
     fontWeight: '800',
     color: '#FFFFFF',
     lineHeight: '1.2',
@@ -263,7 +263,7 @@ const styles = {
   },
   precio: {
     margin: 0,
-    fontSize: '19px',
+    fontSize: '17px',
     fontWeight: '700',
     color: '#C8A84E',
   },
