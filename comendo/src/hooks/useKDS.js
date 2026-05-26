@@ -4,7 +4,7 @@ import useKDSSound from './useKDSSound';
 import { asignarMeseroAutomatico } from '../api/meseroService';
 
 const ESTADOS_KDS = ['Recibido', 'Preparando', 'Listo'];
-const MINUTOS_VISIBLE_LISTO = 2;
+const MINUTOS_VISIBLE_LISTO = 3;
 
 const useKDS = () => {
   const [pedidos, setPedidos] = useState([]);

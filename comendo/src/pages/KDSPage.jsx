@@ -59,6 +59,58 @@ const KDS_CSS = `
   }
 `;
 
+const MINUTOS_VISIBLE_LISTO = 3;
+
+const CuentaAtrasListo = ({ fechaListo }) => {
+  const [segundosRestantes, setSegundosRestantes] = useState(() => {
+    const transcurridos = (new Date() - new Date(fechaListo)) / 1000;
+    return Math.max(0, MINUTOS_VISIBLE_LISTO * 60 - transcurridos);
+  });
+
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      const transcurridos = (new Date() - new Date(fechaListo)) / 1000;
+      setSegundosRestantes(Math.max(0, MINUTOS_VISIBLE_LISTO * 60 - transcurridos));
+    }, 1000);
+    return () => clearInterval(intervalo);
+  }, [fechaListo]);
+
+  const minutos = Math.floor(segundosRestantes / 60);
+  const segundos = Math.floor(segundosRestantes % 60);
+  const urgente = segundosRestantes <= 30;
+  const porcentaje = (segundosRestantes / (MINUTOS_VISIBLE_LISTO * 60)) * 100;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        fontSize: '12px',
+        color: urgente ? '#ff4444' : '#4CAF50',
+      }}>
+        <span style={{ fontWeight: 600 }}>Se oculta en</span>
+        <span
+          className={urgente ? 'cronometro-urgent' : ''}
+          style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '14px', letterSpacing: '1px' }}
+        >
+          {String(minutos).padStart(2, '0')}:{String(segundos).padStart(2, '0')}
+        </span>
+      </div>
+      {/* Barra de progreso */}
+      <div style={{ height: '4px', backgroundColor: '#333', borderRadius: '4px', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${porcentaje}%`,
+          backgroundColor: urgente ? '#ff4444' : '#4CAF50',
+          borderRadius: '4px',
+          transition: 'width 1s linear, background-color 0.3s',
+        }} />
+      </div>
+    </div>
+  );
+};
+
 const COLUMNAS = [
   {
     estado: 'Recibido',
@@ -184,6 +236,12 @@ const TarjetaPedido = ({ pedido, columna, onCambiarEstado }) => {
           );
         })}
       </div>
+
+      {pedido.estado_actual === 'Listo' && (
+        <CuentaAtrasListo
+          fechaListo={pedido.fecha_listo_local ?? pedido.fecha_creacion}
+        />
+      )}
 
       {pedido.mesero?.nombre && (
         <div style={styles.meseroBloque}>
