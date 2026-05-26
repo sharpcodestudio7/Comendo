@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
 import ModalConfirm from '../ModalConfirm';
+import { Unlock } from 'lucide-react';
 
 const ESTADOS_MESA = {
   Libre: { color: '#1B5E20', emoji: '🟢', label: 'Libre' },
@@ -21,7 +22,9 @@ const MonitorMesas = () => {
   const [cargando, setCargando] = useState(true);
   const [cerrando, setCerrando] = useState(null);
   const [modalCerrar, setModalCerrar] = useState(null);
-  const [editandoPago, setEditandoPago] = useState(null); // id_pedido que se está editando
+  const [editandoPago, setEditandoPago] = useState(null);
+  const [liberandoMesas, setLiberandoMesas] = useState(false);
+  const [resultadoLiberar, setResultadoLiberar] = useState(null); // { liberadas: N } | null
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -78,6 +81,37 @@ const MonitorMesas = () => {
     await cargarDatos();
   };
 
+  const liberarMesasSinPedido = async () => {
+    setLiberandoMesas(true);
+    setResultadoLiberar(null);
+
+    const { data: pedidosActivos } = await supabase
+      .from('pedidos')
+      .select('id_mesa')
+      .in('estado_actual', ['Recibido', 'Preparando', 'Listo', 'Entregado']);
+
+    const mesasOcupadas = [...new Set((pedidosActivos || []).map((p) => p.id_mesa))];
+
+    let query = supabase
+      .from('mesas')
+      .update({ token_sesion_actual: null, token_creado_en: null, estado: 'Libre' })
+      .not('token_sesion_actual', 'is', null)
+      .select('id_mesa');
+
+    if (mesasOcupadas.length > 0) {
+      query = query.not('id_mesa', 'in', `(${mesasOcupadas.join(',')})`);
+    }
+
+    const { data, error } = await query;
+    setLiberandoMesas(false);
+
+    if (!error) {
+      setResultadoLiberar({ liberadas: data?.length || 0 });
+      setTimeout(() => setResultadoLiberar(null), 5000);
+      if (data?.length > 0) await cargarDatos();
+    }
+  };
+
   const cerrarMesa = (mesa) => setModalCerrar(mesa);
 
   const confirmarCerrarMesa = async () => {
@@ -125,8 +159,30 @@ const MonitorMesas = () => {
     <div>
       <div style={styles.header}>
         <h2 style={styles.titulo}>🗺 Monitor de Mesas</h2>
-        <button style={styles.btnRefresh} onClick={cargarDatos}>🔄 Actualizar</button>
+        <div style={styles.headerAcciones}>
+          <button style={styles.btnRefresh} onClick={cargarDatos}>🔄 Actualizar</button>
+          <button
+            style={{
+              ...styles.btnLiberar,
+              opacity: liberandoMesas ? 0.6 : 1,
+              cursor: liberandoMesas ? 'not-allowed' : 'pointer',
+            }}
+            onClick={liberarMesasSinPedido}
+            disabled={liberandoMesas}
+          >
+            <Unlock size={14} />
+            {liberandoMesas ? 'Liberando...' : 'Liberar sin pedido'}
+          </button>
+        </div>
       </div>
+
+      {resultadoLiberar !== null && (
+        <div style={styles.feedbackLiberar}>
+          {resultadoLiberar.liberadas === 0
+            ? '— No hay mesas pendientes de liberar'
+            : `✅ ${resultadoLiberar.liberadas} mesa${resultadoLiberar.liberadas > 1 ? 's liberadas' : ' liberada'} correctamente`}
+        </div>
+      )}
 
       <div style={styles.kpiGrid}>
         <div style={{ ...styles.kpiCard, borderTop: `3px solid ${ESTADOS_MESA.Libre.color}` }}>
@@ -271,9 +327,24 @@ const MonitorMesas = () => {
 };
 
 const styles = {
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' },
   titulo: { margin: 0, color: '#FFFFFF', fontSize: '20px', fontWeight: '700' },
+  headerAcciones: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' },
   btnRefresh: { padding: '8px 16px', backgroundColor: 'transparent', color: '#B87333', border: '1px solid #B87333', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  btnLiberar: {
+    display: 'flex', alignItems: 'center', gap: '6px',
+    padding: '8px 16px', backgroundColor: 'transparent',
+    color: '#C8A84E', border: '1px solid #C8A84E',
+    borderRadius: '8px', fontSize: '13px', fontWeight: '600',
+    transition: 'background-color 0.2s ease',
+  },
+  feedbackLiberar: {
+    backgroundColor: 'rgba(200,168,78,0.08)',
+    border: '1px solid rgba(200,168,78,0.3)',
+    borderRadius: '8px', padding: '10px 16px',
+    color: '#C8A84E', fontSize: '13px', fontWeight: '500',
+    marginBottom: '16px',
+  },
   kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' },
   kpiCard: { backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid #333' },
   kpiLabel: { color: '#999999', fontSize: '12px', fontWeight: '600' },

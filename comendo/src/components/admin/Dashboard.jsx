@@ -5,7 +5,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
-import { BarChart2, Download, AlertTriangle, Unlock } from 'lucide-react';
+import { BarChart2, Download, AlertTriangle } from 'lucide-react';
 
 const ESTADOS_VALIDOS = ['Listo', 'Entregado', 'Pagado'];
 
@@ -124,9 +124,6 @@ const Dashboard = () => {
   const [periodo, setPeriodo] = useState('hoy');
   const [tabProductos, setTabProductos] = useState('hoy');
   const [pedidosCompletos, setPedidosCompletos] = useState([]);
-  const [liberandoMesas, setLiberandoMesas] = useState(false);
-  const [resultadoLiberar, setResultadoLiberar] = useState(null); // { liberadas: N } | null
-
   useEffect(() => { cargarDatos(); }, []);
 
   const cargarDatos = async () => {
@@ -237,38 +234,6 @@ const Dashboard = () => {
     setCargando(false);
   };
 
-  const liberarMesasSinPedido = async () => {
-    setLiberandoMesas(true);
-    setResultadoLiberar(null);
-
-    // 1. Mesas con pedidos activos (no se pueden liberar)
-    const { data: pedidosActivos } = await supabase
-      .from('pedidos')
-      .select('id_mesa')
-      .in('estado_actual', ['Recibido', 'Preparando', 'Listo', 'Entregado']);
-
-    const mesasOcupadas = [...new Set((pedidosActivos || []).map((p) => p.id_mesa))];
-
-    // 2. Liberar mesas con token activo y sin pedido en curso
-    let query = supabase
-      .from('mesas')
-      .update({ token_sesion_actual: null, token_creado_en: null, estado: 'Libre' })
-      .not('token_sesion_actual', 'is', null)
-      .select('id_mesa');
-
-    if (mesasOcupadas.length > 0) {
-      query = query.not('id_mesa', 'in', `(${mesasOcupadas.join(',')})`);
-    }
-
-    const { data, error } = await query;
-    setLiberandoMesas(false);
-
-    if (!error) {
-      setResultadoLiberar({ liberadas: data?.length || 0 });
-      setTimeout(() => setResultadoLiberar(null), 5000);
-    }
-  };
-
   if (cargando) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '80px', color: '#666' }}>
       Cargando dashboard...
@@ -323,22 +288,6 @@ const Dashboard = () => {
               ))}
             </div>
             <button
-              style={{
-                ...styles.btnExportar,
-                borderColor: liberandoMesas ? '#555' : '#C8A84E',
-                color: liberandoMesas ? '#555' : '#C8A84E',
-                cursor: liberandoMesas ? 'not-allowed' : 'pointer',
-                opacity: liberandoMesas ? 0.7 : 1,
-              }}
-              onClick={liberarMesasSinPedido}
-              disabled={liberandoMesas}
-              title="Libera las mesas que tienen sesión activa pero aún no han hecho ningún pedido"
-            >
-              <Unlock size={14} />
-              {liberandoMesas ? 'Liberando...' : 'Liberar mesas sin pedido'}
-            </button>
-
-            <button
               className="dash-btn-export"
               style={styles.btnExportar}
               onClick={() => exportarVentas(pedidosCompletos)}
@@ -348,16 +297,6 @@ const Dashboard = () => {
             </button>
           </div>
         </div>
-
-        {/* Feedback liberar mesas */}
-        {resultadoLiberar !== null && (
-          <div style={styles.feedbackLiberar}>
-            <Unlock size={15} color="#C8A84E" />
-            {resultadoLiberar.liberadas === 0
-              ? 'No había mesas con sesión activa sin pedido.'
-              : `✅ ${resultadoLiberar.liberadas} mesa${resultadoLiberar.liberadas > 1 ? 's liberadas' : ' liberada'} correctamente.`}
-          </div>
-        )}
 
         {/* ── Sección 1: KPIs ─────────────────────────────── */}
         <div className="dash-grid-4 admin-fade-in" style={styles.kpiGrid}>
@@ -644,12 +583,6 @@ const styles = {
   notaItem: {
     backgroundColor: '#2A2A2A', borderRadius: '8px', padding: '10px 12px',
     marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '2px',
-  },
-  feedbackLiberar: {
-    display: 'flex', alignItems: 'center', gap: '8px',
-    backgroundColor: 'rgba(200,168,78,0.1)', border: '1px solid rgba(200,168,78,0.3)',
-    borderRadius: '8px', padding: '10px 16px',
-    color: '#C8A84E', fontSize: '13px', fontWeight: 500,
   },
 };
 
