@@ -191,7 +191,7 @@ const styles = {
     zIndex: 201,
     display: 'flex',
     flexDirection: 'column',
-    /* Sin overflow:hidden aquí — cada sección maneja el suyo */
+    overflow: 'hidden',
   },
 
   /* Botón cerrar — dentro de heroContainer (position:relative) para evitar recorte en Android */
@@ -271,6 +271,7 @@ const styles = {
   /* Contenido */
   contenido: {
     flex: 1,
+    minHeight: 0,
     overflowY: 'auto',
     WebkitOverflowScrolling: 'touch',
     padding: '18px 20px 8px',
