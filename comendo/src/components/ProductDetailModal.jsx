@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../api/supabase';
 import useCartStore from '../store/useCartStore';
 
@@ -73,7 +74,10 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
   const formatearPrecio = (valor) =>
     '$' + new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(valor);
 
-  return (
+  // createPortal inyecta el modal directamente en document.body, escapando
+  // cualquier stacking context creado por ancestros (PageTransition usa
+  // transform en su animación CSS, lo que confina position:fixed al ancestro).
+  return createPortal(
     <>
       <style>{MODAL_CSS}</style>
 
@@ -81,7 +85,7 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
 
       <div className="modal-premium" style={styles.modal}>
 
-        {/* ── Hero: imagen con gradiente cinematográfico ── */}
+        {/* ── Hero: imagen con gradiente ── */}
         <div style={styles.heroContainer}>
           {producto.imagen_url ? (
             <img src={producto.imagen_url} alt={producto.nombre} style={styles.heroImagen} />
@@ -89,7 +93,6 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
             <div style={styles.heroPlaceholder} />
           )}
           <div style={styles.heroGradiente} />
-          {/* Botón cerrar dentro del hero para evitar recorte por border-radius en Android */}
           <button style={styles.btnCerrar} onClick={onCerrar}>✕</button>
           <div style={styles.heroTexto}>
             <h2 style={styles.nombre}>{producto.nombre}</h2>
@@ -97,7 +100,7 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
           </div>
         </div>
 
-        {/* ── Contenido ── */}
+        {/* ── Contenido scrollable ── */}
         <div style={styles.contenido}>
 
           {producto.descripcion && (
@@ -153,7 +156,7 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
 
         </div>
 
-        {/* Footer fijo: contador + botón siempre visibles sin deslizar */}
+        {/* ── Footer fijo: contador + botón siempre visibles ── */}
         <div style={styles.btnFooter}>
           <div style={styles.footerRow}>
             <div style={styles.contadorWrapper}>
@@ -168,16 +171,20 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
         </div>
 
       </div>
-    </>
+    </>,
+    document.body
   );
 };
 
 const styles = {
   overlay: {
     position: 'fixed',
-    inset: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.82)',
-    zIndex: 200,
+    zIndex: 9999,
   },
   modal: {
     position: 'fixed',
@@ -189,13 +196,13 @@ const styles = {
     backgroundColor: '#1A1A1A',
     borderRadius: '24px 24px 0 0',
     maxHeight: '92vh',
-    zIndex: 201,
+    zIndex: 10000,
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
   },
 
-  /* Botón cerrar — dentro de heroContainer (position:relative) para evitar recorte en Android */
+  /* Botón cerrar — dentro de heroContainer para evitar recorte en Android */
   btnCerrar: {
     position: 'absolute',
     top: '14px',
@@ -212,7 +219,7 @@ const styles = {
     minHeight: '40px',
     fontSize: '16px',
     cursor: 'pointer',
-    zIndex: 203,
+    zIndex: 10001,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -250,7 +257,7 @@ const styles = {
     bottom: 0,
     left: 0,
     right: 0,
-    padding: '14px 20px 14px',
+    padding: '14px 20px',
     textAlign: 'center',
   },
   nombre: {
@@ -269,7 +276,7 @@ const styles = {
     color: '#C8A84E',
   },
 
-  /* Contenido */
+  /* Contenido scrollable */
   contenido: {
     flex: 1,
     minHeight: 0,
@@ -297,7 +304,7 @@ const styles = {
   opcional: { fontSize: '12px', fontWeight: '400', color: '#555', textTransform: 'none', letterSpacing: 0 },
   seccionSub: { margin: '0 0 12px', fontSize: '12px', color: '#666' },
 
-  /* Chips */
+  /* Chips de ingredientes */
   chips: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   chip: {
     display: 'flex',
@@ -344,6 +351,7 @@ const styles = {
   cargando: { fontSize: '13px', color: '#666' },
   sinReceta: { fontSize: '13px', color: '#666', fontStyle: 'italic' },
 
+  /* Footer fijo: contador + botón */
   btnFooter: {
     flexShrink: 0,
     padding: '12px 20px',
@@ -356,8 +364,6 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
   },
-
-  /* Cantidad — ahora en el footer fijo */
   contadorWrapper: {
     display: 'flex',
     alignItems: 'center',
