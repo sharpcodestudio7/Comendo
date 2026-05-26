@@ -81,9 +81,6 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
 
       <div className="modal-premium" style={styles.modal}>
 
-        {/* Botón cerrar flotando sobre la imagen */}
-        <button style={styles.btnCerrar} onClick={onCerrar}>✕</button>
-
         {/* ── Hero: imagen con gradiente cinematográfico ── */}
         <div style={styles.heroContainer}>
           {producto.imagen_url ? (
@@ -92,6 +89,8 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
             <div style={styles.heroPlaceholder} />
           )}
           <div style={styles.heroGradiente} />
+          {/* Botón cerrar dentro del hero para evitar recorte por border-radius en Android */}
+          <button style={styles.btnCerrar} onClick={onCerrar}>✕</button>
           <div style={styles.heroTexto}>
             <h2 style={styles.nombre}>{producto.nombre}</h2>
             <p style={styles.precio}>{formatearPrecio(producto.precio)}</p>
@@ -195,20 +194,22 @@ const styles = {
     /* Sin overflow:hidden aquí — cada sección maneja el suyo */
   },
 
-  /* Botón cerrar */
+  /* Botón cerrar — dentro de heroContainer (position:relative) para evitar recorte en Android */
   btnCerrar: {
     position: 'absolute',
-    top: '16px',
-    right: '16px',
-    background: 'rgba(0,0,0,0.6)',
+    top: '14px',
+    right: '14px',
+    background: 'rgba(0,0,0,0.65)',
     backdropFilter: 'blur(6px)',
     WebkitBackdropFilter: 'blur(6px)',
     color: '#FFFFFF',
-    border: '1px solid rgba(255,255,255,0.15)',
+    border: '1.5px solid rgba(255,255,255,0.25)',
     borderRadius: '50%',
-    width: '34px',
-    height: '34px',
-    fontSize: '14px',
+    width: '40px',
+    height: '40px',
+    minWidth: '40px',
+    minHeight: '40px',
+    fontSize: '16px',
     cursor: 'pointer',
     zIndex: 203,
     display: 'flex',
