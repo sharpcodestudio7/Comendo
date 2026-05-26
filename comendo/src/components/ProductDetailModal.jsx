@@ -151,19 +151,20 @@ const ProductDetailModal = ({ producto, onCerrar }) => {
             <p style={styles.charCount}>{notas.length}/200</p>
           </div>
 
-          {/* Cantidad */}
-          <div style={styles.contadorWrapper}>
-            <button style={styles.btnContador} onClick={() => setCantidad((c) => Math.max(1, c - 1))}>−</button>
-            <span style={styles.cantidad}>{cantidad}</span>
-            <button style={{ ...styles.btnContador, ...styles.btnContadorMas }} onClick={() => setCantidad((c) => c + 1)}>+</button>
-          </div>
-
         </div>
 
+        {/* Footer fijo: contador + botón siempre visibles sin deslizar */}
         <div style={styles.btnFooter}>
-          <button className="btn-pedido" style={styles.btnAgregar} onClick={handleAgregar}>
-            Añadir al pedido — {formatearPrecio(producto.precio * cantidad)}
-          </button>
+          <div style={styles.footerRow}>
+            <div style={styles.contadorWrapper}>
+              <button style={styles.btnContador} onClick={() => setCantidad((c) => Math.max(1, c - 1))}>−</button>
+              <span style={styles.cantidad}>{cantidad}</span>
+              <button style={{ ...styles.btnContador, ...styles.btnContadorMas }} onClick={() => setCantidad((c) => c + 1)}>+</button>
+            </div>
+            <button className="btn-pedido" style={styles.btnAgregar} onClick={handleAgregar}>
+              Añadir — {formatearPrecio(producto.precio * cantidad)}
+            </button>
+          </div>
         </div>
 
       </div>
@@ -343,22 +344,34 @@ const styles = {
   cargando: { fontSize: '13px', color: '#666' },
   sinReceta: { fontSize: '13px', color: '#666', fontStyle: 'italic' },
 
-  /* Cantidad */
+  btnFooter: {
+    flexShrink: 0,
+    padding: '12px 20px',
+    paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+    borderTop: '1px solid #2C2C2C',
+    backgroundColor: '#1A1A1A',
+  },
+  footerRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+
+  /* Cantidad — ahora en el footer fijo */
   contadorWrapper: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: '28px',
-    margin: '18px 0 4px',
+    gap: '10px',
+    flexShrink: 0,
   },
   btnContador: {
-    width: '42px',
-    height: '42px',
+    width: '38px',
+    height: '38px',
     borderRadius: '50%',
     border: '1.5px solid #C8A84E',
     backgroundColor: 'transparent',
     color: '#C8A84E',
-    fontSize: '22px',
+    fontSize: '20px',
     cursor: 'pointer',
     fontWeight: '700',
     display: 'flex',
@@ -373,31 +386,23 @@ const styles = {
     border: 'none',
   },
   cantidad: {
-    fontSize: '22px',
+    fontSize: '20px',
     fontWeight: '700',
     color: '#FFFFFF',
-    minWidth: '40px',
+    minWidth: '28px',
     textAlign: 'center',
   },
-
-  btnFooter: {
-    flexShrink: 0,
-    padding: '14px 20px',
-    paddingBottom: 'max(14px, env(safe-area-inset-bottom))',
-    borderTop: '1px solid #2C2C2C',
-    backgroundColor: '#1A1A1A',
-  },
   btnAgregar: {
-    width: '100%',
-    padding: '16px',
+    flex: 1,
+    padding: '14px 12px',
     background: 'linear-gradient(135deg, #C8A84E 0%, #B87333 100%)',
     color: '#0D0D0D',
     border: 'none',
     borderRadius: '14px',
     fontWeight: '800',
-    fontSize: '16px',
+    fontSize: '15px',
     cursor: 'pointer',
-    minHeight: '52px',
+    minHeight: '48px',
     letterSpacing: '0.2px',
   },
 };
