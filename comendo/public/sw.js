@@ -1,5 +1,5 @@
 // public/sw.js
-const CACHE_NAME = 'comendo-v1';
+const CACHE_NAME = 'comendo-v2';
 
 const ASSETS_PRECACHE = [
   '/',
@@ -59,13 +59,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache First para assets estáticos
-  if (
-    request.destination === 'script' ||
-    request.destination === 'style' ||
-    request.destination === 'image' ||
-    request.destination === 'font'
-  ) {
+  // Network First para scripts y estilos (garantiza versión actualizada tras deploy)
+  if (request.destination === 'script' || request.destination === 'style') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (!response || response.status !== 200) return response;
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Cache First para imágenes y fuentes (cambian poco)
+  if (request.destination === 'image' || request.destination === 'font') {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
