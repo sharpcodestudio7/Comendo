@@ -96,6 +96,36 @@ const MEDALLAS = ['#FFD700', '#C0C0C0', '#CD7F32'];
 const PIE_COLORS = ['#B87333', '#4A90D9'];
 const CAT_COLORS = ['#B87333', '#4A90D9', '#4CAF50', '#FFB300', '#E06C75', '#9C67E0', '#00BCD4'];
 
+const calcTendenciaProductos = (pedidos, topN = 7) => {
+  const hoy = new Date();
+  const diasMap = {};
+  const totalPorProducto = {};
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i);
+    diasMap[`${d.getDate()}/${d.getMonth() + 1}`] = {};
+  }
+  pedidos?.forEach(({ fecha_creacion, detalle_pedidos }) => {
+    const d = new Date(fecha_creacion);
+    const k = `${d.getDate()}/${d.getMonth() + 1}`;
+    (detalle_pedidos || []).forEach(({ subtotal, productos }) => {
+      const nombre = productos?.nombre;
+      if (!nombre) return;
+      totalPorProducto[nombre] = (totalPorProducto[nombre] || 0) + (subtotal || 0);
+      if (k in diasMap) diasMap[k][nombre] = (diasMap[k][nombre] || 0) + (subtotal || 0);
+    });
+  });
+  const topProductos = Object.entries(totalPorProducto)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN)
+    .map(([nombre]) => nombre);
+  const data = Object.entries(diasMap).map(([dia, prods]) => {
+    const entry = { dia };
+    topProductos.forEach((nombre) => { entry[nombre] = prods[nombre] || 0; });
+    return entry;
+  });
+  return { data, productos: topProductos };
+};
+
 const calcTendenciaCategorias = (pedidos) => {
   const hoy = new Date();
   const diasMap = {};
@@ -201,6 +231,7 @@ const Dashboard = () => {
       { data: exclusiones },
       { data: pedExport },
       { data: pedCatTend },
+      { data: pedProdTend },
     ] = await Promise.all([
       supabase.from('pedidos').select('total, metodo_pago').in('estado_actual', ESTADOS_VALIDOS).gte('fecha_creacion', inicioHoy),
       supabase.from('pedidos').select('total').in('estado_actual', ESTADOS_VALIDOS).gte('fecha_creacion', inicioAyer).lt('fecha_creacion', inicioHoy),
@@ -225,6 +256,11 @@ const Dashboard = () => {
       `).order('fecha_creacion', { ascending: false }),
       supabase.from('pedidos')
         .select('fecha_creacion, detalle_pedidos ( subtotal, productos ( categorias ( nombre ) ) )')
+        .in('estado_actual', ESTADOS_VALIDOS)
+        .gte('fecha_creacion', hace30Dias)
+        .order('fecha_creacion', { ascending: true }),
+      supabase.from('pedidos')
+        .select('fecha_creacion, detalle_pedidos ( subtotal, productos ( nombre ) )')
         .in('estado_actual', ESTADOS_VALIDOS)
         .gte('fecha_creacion', hace30Dias)
         .order('fecha_creacion', { ascending: true }),
@@ -278,6 +314,7 @@ const Dashboard = () => {
       tkMes: tk(vMes, nMes), tkMesP: tk(vMesP, nMesP),
       tendencia: calcTendencia(pedTend),
       tendenciaCat: calcTendenciaCategorias(pedCatTend),
+      tendenciaProd: calcTendenciaProductos(pedProdTend),
       productosHoy: calcRanking(pedMesDet, inicioHoy),
       productosMes: calcRanking(pedMesDet),
       distPagos, totalPagos: distPagos.efectivo + distPagos.tarjeta,
@@ -402,6 +439,42 @@ const Dashboard = () => {
                     key={cat}
                     type="monotone"
                     dataKey={cat}
+                    stroke={CAT_COLORS[i % CAT_COLORS.length]}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 5, strokeWidth: 0 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* ── Sección 2c: Tendencia por producto ─────────────── */}
+        <div className="admin-fade-in" style={styles.panel}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
+            <h3 style={{ ...styles.panelTitulo, marginBottom: 0 }}>Ventas por producto — últimos 30 días</h3>
+            <span style={{ fontSize: '12px', color: '#555' }}>Top 7 productos</span>
+          </div>
+          {dt.tendenciaProd.productos.length === 0 ? (
+            <p style={styles.vacio}>Sin datos de productos para el período</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={dt.tendenciaProd.data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid stroke="#222" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="dia" stroke="#444" fontSize={11} tick={{ fill: '#666' }} tickLine={false} axisLine={false} interval={4} />
+                <YAxis stroke="#444" fontSize={11} tick={{ fill: '#666' }} tickLine={false} axisLine={false} tickFormatter={(v) => v > 0 ? `$${(v / 1000).toFixed(0)}k` : '0'} width={50} />
+                <Tooltip content={<TooltipCategorias />} />
+                <Legend
+                  wrapperStyle={{ paddingTop: '16px', fontSize: '12px', color: '#999' }}
+                  iconType="circle"
+                  iconSize={8}
+                />
+                {dt.tendenciaProd.productos.map((nombre, i) => (
+                  <Line
+                    key={nombre}
+                    type="monotone"
+                    dataKey={nombre}
                     stroke={CAT_COLORS[i % CAT_COLORS.length]}
                     strokeWidth={2}
                     dot={false}
