@@ -198,7 +198,7 @@ const MeseroPage = () => {
     setEntregando(pedidoId);
     await supabase
       .from('pedidos')
-      .update({ estado_actual: 'Entregado' })
+      .update({ estado_actual: 'Entregado', fecha_entregado: new Date().toISOString() })
       .eq('id_pedido', pedidoId);
     await cargarPedidos(meseroActivo.id_usuario);
     setEntregando(null);

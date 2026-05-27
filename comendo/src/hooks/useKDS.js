@@ -122,9 +122,14 @@ const useKDS = () => {
 
   // ── Cambiar estado manualmente ────────────────────────────────────────
   const cambiarEstado = async (pedidoId, nuevoEstado) => {
+    const ahora = new Date().toISOString();
+    const updateData = { estado_actual: nuevoEstado };
+    if (nuevoEstado === 'Preparando') updateData.fecha_preparando = ahora;
+    if (nuevoEstado === 'Listo')      updateData.fecha_listo       = ahora;
+
     const { error } = await supabase
       .from('pedidos')
-      .update({ estado_actual: nuevoEstado })
+      .update(updateData)
       .eq('id_pedido', pedidoId);
 
     if (error) {

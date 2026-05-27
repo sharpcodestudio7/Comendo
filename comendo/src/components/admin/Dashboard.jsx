@@ -96,6 +96,32 @@ const MEDALLAS = ['#FFD700', '#C0C0C0', '#CD7F32'];
 const PIE_COLORS = ['#B87333', '#4A90D9'];
 const CAT_COLORS = ['#B87333', '#4A90D9', '#4CAF50', '#FFB300', '#E06C75', '#9C67E0', '#00BCD4'];
 
+const calcTimeline = (pedidos) => {
+  if (!pedidos?.length) return null;
+  const tiempos = pedidos
+    .map((p) => ({
+      espera:  (new Date(p.fecha_preparando) - new Date(p.fecha_creacion)) / 60000,
+      cocina:  (new Date(p.fecha_listo)       - new Date(p.fecha_preparando)) / 60000,
+      entrega: (new Date(p.fecha_entregado)   - new Date(p.fecha_listo)) / 60000,
+    }))
+    .filter((t) => t.espera >= 0 && t.cocina >= 0 && t.entrega >= 0);
+  if (!tiempos.length) return null;
+  const avg = (key) => tiempos.reduce((a, t) => a + t[key], 0) / tiempos.length;
+  const espera  = avg('espera');
+  const cocina  = avg('cocina');
+  const entrega = avg('entrega');
+  return { espera, cocina, entrega, total: espera + cocina + entrega, n: tiempos.length };
+};
+
+const colorTiempo = (min) =>
+  min < 5 ? '#4CAF50' : min < 12 ? '#B87333' : min < 20 ? '#FFB300' : '#ff4444';
+
+const fmtMin = (min) => {
+  if (min < 1) return '< 1 min';
+  const m = Math.round(min);
+  return m === 1 ? '1 min' : `${m} min`;
+};
+
 const calcTendenciaProductos = (pedidos, topN = 7) => {
   const hoy = new Date();
   const diasMap = {};
@@ -232,6 +258,7 @@ const Dashboard = () => {
       { data: pedExport },
       { data: pedCatTend },
       { data: pedProdTend },
+      { data: pedTimeline },
     ] = await Promise.all([
       supabase.from('pedidos').select('total, metodo_pago').in('estado_actual', ESTADOS_VALIDOS).gte('fecha_creacion', inicioHoy),
       supabase.from('pedidos').select('total').in('estado_actual', ESTADOS_VALIDOS).gte('fecha_creacion', inicioAyer).lt('fecha_creacion', inicioHoy),
@@ -264,6 +291,13 @@ const Dashboard = () => {
         .in('estado_actual', ESTADOS_VALIDOS)
         .gte('fecha_creacion', hace30Dias)
         .order('fecha_creacion', { ascending: true }),
+      supabase.from('pedidos')
+        .select('fecha_creacion, fecha_preparando, fecha_listo, fecha_entregado')
+        .in('estado_actual', ['Entregado', 'Pagado'])
+        .not('fecha_preparando', 'is', null)
+        .not('fecha_listo', 'is', null)
+        .not('fecha_entregado', 'is', null)
+        .gte('fecha_creacion', hace30Dias),
     ]);
 
     const sum = (arr) => arr?.reduce((a, p) => a + (p.total || 0), 0) || 0;
@@ -315,6 +349,7 @@ const Dashboard = () => {
       tendencia: calcTendencia(pedTend),
       tendenciaCat: calcTendenciaCategorias(pedCatTend),
       tendenciaProd: calcTendenciaProductos(pedProdTend),
+      timeline: calcTimeline(pedTimeline),
       productosHoy: calcRanking(pedMesDet, inicioHoy),
       productosMes: calcRanking(pedMesDet),
       distPagos, totalPagos: distPagos.efectivo + distPagos.tarjeta,
@@ -674,6 +709,89 @@ const Dashboard = () => {
               ));
             })()}
           </div>
+        </div>
+
+        {/* ── Sección 4b: Timeline del pedido ──────────────── */}
+        <div className="admin-fade-in" style={styles.panel}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
+            <h3 style={{ ...styles.panelTitulo, marginBottom: 0 }}>Timeline del pedido — duración promedio por etapa</h3>
+            {dt.timeline && (
+              <span style={{ fontSize: '12px', color: '#555' }}>
+                {dt.timeline.n} pedido{dt.timeline.n !== 1 ? 's' : ''} analizados · últimos 30 días
+              </span>
+            )}
+          </div>
+
+          {!dt.timeline ? (
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <p style={{ color: '#555', fontSize: '14px', fontStyle: 'italic', margin: '0 0 8px' }}>
+                Sin datos suficientes aún
+              </p>
+              <p style={{ color: '#444', fontSize: '12px', margin: 0 }}>
+                El timeline se calculará automáticamente cuando haya pedidos entregados con los nuevos timestamps.
+              </p>
+            </div>
+          ) : (() => {
+            const etapas = [
+              { label: 'Recibido',   sub: 'Pedido creado',    tiempo: null },
+              { label: 'Preparando', sub: 'Cocina inicia',    tiempo: dt.timeline.espera },
+              { label: 'Listo',      sub: 'Plato terminado',  tiempo: dt.timeline.cocina },
+              { label: 'Entregado',  sub: 'Mesero entrega',   tiempo: dt.timeline.entrega },
+            ];
+            return (
+              <>
+                {/* ── Pipeline horizontal ── */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: '8px 0 24px', overflowX: 'auto' }}>
+                  {etapas.map((etapa, i) => (
+                    <div key={etapa.label} style={{ display: 'flex', alignItems: 'center', flex: i < etapas.length - 1 ? 1 : 'none' }}>
+                      {/* Nodo */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        <div style={{
+                          width: '16px', height: '16px', borderRadius: '50%',
+                          backgroundColor: etapa.tiempo !== null ? colorTiempo(etapa.tiempo) : '#B87333',
+                          boxShadow: `0 0 8px ${etapa.tiempo !== null ? colorTiempo(etapa.tiempo) : '#B87333'}55`,
+                          flexShrink: 0,
+                        }} />
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap' }}>{etapa.label}</span>
+                        <span style={{ fontSize: '10px', color: '#555', whiteSpace: 'nowrap' }}>{etapa.sub}</span>
+                      </div>
+                      {/* Conector */}
+                      {i < etapas.length - 1 && (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '0 8px', marginBottom: '30px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: colorTiempo(etapas[i + 1].tiempo), whiteSpace: 'nowrap' }}>
+                            {fmtMin(etapas[i + 1].tiempo)}
+                          </span>
+                          <div style={{ width: '100%', height: '3px', backgroundColor: colorTiempo(etapas[i + 1].tiempo), borderRadius: '2px', opacity: 0.8 }} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Tarjetas resumen ── */}
+                <div className="dash-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                  {[
+                    { label: 'Tiempo de espera',  sub: 'Recibido → Preparando', valor: dt.timeline.espera,  icono: '⏳' },
+                    { label: 'Tiempo en cocina',   sub: 'Preparando → Listo',    valor: dt.timeline.cocina,  icono: '👨‍🍳' },
+                    { label: 'Tiempo de entrega',  sub: 'Listo → Entregado',     valor: dt.timeline.entrega, icono: '🛎' },
+                    { label: 'Tiempo total',       sub: 'Pedido → Entregado',    valor: dt.timeline.total,   icono: '✓' },
+                  ].map(({ label, sub, valor, icono }) => {
+                    const col = colorTiempo(valor);
+                    return (
+                      <div key={label} style={{ backgroundColor: '#2A2A2A', borderRadius: '10px', padding: '16px', border: `1px solid ${col}33`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{label}</span>
+                          <span style={{ fontSize: '16px' }}>{icono}</span>
+                        </div>
+                        <span style={{ fontSize: '26px', fontWeight: 700, color: col, lineHeight: 1 }}>{fmtMin(valor)}</span>
+                        <span style={{ fontSize: '11px', color: '#444' }}>{sub}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
         </div>
 
         {/* ── Sección 5: Pedidos por estado ────────────────── */}
