@@ -22,6 +22,7 @@ Siempre responde en **español**. Toda comunicación, explicaciones, comentarios
 | Iconos | Lucide React |
 | Estilos | CSS-in-JS (estilos inline en los componentes) |
 | Exportación | xlsx + file-saver + jszip |
+| Gráficas | recharts (AreaChart, LineChart, PieChart, Legend) |
 | QR | qrcode.react |
 | PWA | manifest.json + Service Worker |
 
@@ -194,18 +195,26 @@ Las páginas KDS, OrderTracking y Mesero usan Supabase Realtime (canales Postgre
 El `Dashboard.jsx` incluye las siguientes secciones de analítica (todas usando `recharts`):
 
 1. **KPIs** — Ventas, pedidos y ticket promedio con comparación vs período anterior (Hoy / Semana / Mes).
-2. **Tendencia de ventas** — `AreaChart` con total de ventas por día, últimos 30 días.
-3. **Ventas por categoría** — `LineChart` multi-línea, una línea por categoría activa, últimos 30 días. Las categorías se detectan dinámicamente de la DB.
-4. **Ventas por producto** — `LineChart` multi-línea, top 7 productos por ventas totales, últimos 30 días.
-5. **Productos Estrella** — Ranking top 5 con barras de progreso (tab Hoy / Este Mes).
-6. **Distribución de pagos** — `PieChart` donut con efectivo vs tarjeta.
-7. **Inventario bajo** — Lista de los 5 insumos con menor stock relativo, con semáforo de color.
-8. **Ingredientes más excluidos** — Ranking de exclusiones solicitadas por comensales.
-9. **Notas recientes** — Últimas 6 personalizaciones escritas por comensales.
-10. **Timeline del pedido** — Pipeline horizontal con tiempo promedio por etapa (Recibido→Preparando→Listo→Entregado) + 4 tarjetas resumen coloreadas por rendimiento (verde < 5 min, cobre 5–12 min, ámbar 12–20 min, rojo > 20 min).
-11. **Pedidos por estado** — Contadores actuales por cada estado del flujo.
+2. **Tendencia de ventas total** — `AreaChart` con el total de ventas por día, últimos 30 días. Función: `calcTendencia()`.
+3. **Ventas por categoría** — `LineChart` multi-línea, una línea por categoría activa, últimos 30 días. Las categorías se detectan dinámicamente de la DB. Función: `calcTendenciaCategorias()`. Query: `detalle_pedidos → productos → categorias`.
+4. **Ventas por producto** — `LineChart` multi-línea, top 7 productos por ventas totales, últimos 30 días. Función: `calcTendenciaProductos(pedidos, topN = 7)`. Query: `detalle_pedidos → productos`.
+5. **Productos Estrella** — Ranking top 5 con barras de progreso (tab Hoy / Este Mes). Función: `calcRanking()`.
+6. **Distribución de pagos** — `PieChart` donut con efectivo vs tarjeta/Nequi/Daviplata.
+7. **Inventario bajo** — Lista de los 5 insumos con menor stock relativo, semáforo de color (crítico/bajo/normal).
+8. **Ingredientes más excluidos** — Top 5 exclusiones solicitadas por comensales con cantidad ahorrada.
+9. **Notas recientes** — Últimas 6 personalizaciones escritas por comensales, agrupadas por producto y mesa.
+10. **Timeline del pedido** — Pipeline horizontal con tiempo promedio por etapa (Recibido→Preparando→Listo→Entregado) + 4 tarjetas resumen. Función: `calcTimeline()`. Colores por rendimiento: verde `< 5 min`, cobre `5–12 min`, ámbar `12–20 min`, rojo `> 20 min`. Solo muestra datos de pedidos con los 3 timestamps completos.
+11. **Pedidos por estado** — Contadores en tiempo real por cada estado del flujo (Recibido, Preparando, Listo, Entregado, Pagado).
 
-Paleta de colores para multi-línea: `CAT_COLORS = ['#B87333', '#4A90D9', '#4CAF50', '#FFB300', '#E06C75', '#9C67E0', '#00BCD4']`.
+**Paleta multi-línea:** `CAT_COLORS = ['#B87333', '#4A90D9', '#4CAF50', '#FFB300', '#E06C75', '#9C67E0', '#00BCD4']`
+
+**Tooltips personalizados:** `TooltipVentas` (ventas totales) y `TooltipCategorias` (multi-línea — solo muestra series con valor > 0 en ese día).
+
+### KDS — Cambio de estado con timestamps
+`useKDS.js → cambiarEstado()` guarda el timestamp correspondiente al cambiar de estado:
+- `Preparando` → guarda `fecha_preparando`
+- `Listo` → guarda `fecha_listo` + dispara auto-asignación de mesero
+- Incluye **fallback defensivo**: si las columnas aún no existen en la DB (error `column not found`), reintenta el update solo con `estado_actual` para no romper el flujo operativo.
 
 ### Alertas sonoras en cocina
 `useKDSSound.js` usa la Web Audio API para emitir beeps al recibir nuevos pedidos o detectar pedidos urgentes (más de 15 minutos).
