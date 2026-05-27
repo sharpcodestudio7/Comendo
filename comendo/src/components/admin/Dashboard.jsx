@@ -4,6 +4,7 @@ import { exportarVentas } from '../../api/exportService';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
+  LineChart, Line, Legend,
 } from 'recharts';
 import { BarChart2, Download, AlertTriangle } from 'lucide-react';
 
@@ -93,6 +94,52 @@ const calcTendencia = (pedidos) => {
 
 const MEDALLAS = ['#FFD700', '#C0C0C0', '#CD7F32'];
 const PIE_COLORS = ['#B87333', '#4A90D9'];
+const CAT_COLORS = ['#B87333', '#4A90D9', '#4CAF50', '#FFB300', '#E06C75', '#9C67E0', '#00BCD4'];
+
+const calcTendenciaCategorias = (pedidos) => {
+  const hoy = new Date();
+  const diasMap = {};
+  const categoriasSet = new Set();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i);
+    diasMap[`${d.getDate()}/${d.getMonth() + 1}`] = {};
+  }
+  pedidos?.forEach(({ fecha_creacion, detalle_pedidos }) => {
+    const d = new Date(fecha_creacion);
+    const k = `${d.getDate()}/${d.getMonth() + 1}`;
+    if (!(k in diasMap)) return;
+    (detalle_pedidos || []).forEach(({ subtotal, productos }) => {
+      const cat = productos?.categorias?.nombre;
+      if (!cat) return;
+      categoriasSet.add(cat);
+      diasMap[k][cat] = (diasMap[k][cat] || 0) + (subtotal || 0);
+    });
+  });
+  const categorias = Array.from(categoriasSet).sort();
+  const data = Object.entries(diasMap).map(([dia, cats]) => {
+    const entry = { dia };
+    categorias.forEach((cat) => { entry[cat] = cats[cat] || 0; });
+    return entry;
+  });
+  return { data, categorias };
+};
+
+const TooltipCategorias = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  const conValor = payload.filter((p) => p.value > 0);
+  if (!conValor.length) return null;
+  return (
+    <div style={{ backgroundColor: '#2A2A2A', border: '1px solid #333', borderRadius: '8px', padding: '10px 14px', minWidth: '170px' }}>
+      <p style={{ color: '#999', fontSize: '12px', margin: '0 0 6px' }}>{label}</p>
+      {conValor.map((entry, i) => (
+        <p key={i} style={{ color: entry.stroke, fontWeight: 600, margin: '3px 0', fontSize: '12px', display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+          <span>{entry.name}</span>
+          <span>{formatCOP(entry.value)}</span>
+        </p>
+      ))}
+    </div>
+  );
+};
 
 const TooltipVentas = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -153,6 +200,7 @@ const Dashboard = () => {
       { data: todosInsumos },
       { data: exclusiones },
       { data: pedExport },
+      { data: pedCatTend },
     ] = await Promise.all([
       supabase.from('pedidos').select('total, metodo_pago').in('estado_actual', ESTADOS_VALIDOS).gte('fecha_creacion', inicioHoy),
       supabase.from('pedidos').select('total').in('estado_actual', ESTADOS_VALIDOS).gte('fecha_creacion', inicioAyer).lt('fecha_creacion', inicioHoy),
@@ -175,6 +223,11 @@ const Dashboard = () => {
           exclusiones_pedido ( nombre_insumo )
         )
       `).order('fecha_creacion', { ascending: false }),
+      supabase.from('pedidos')
+        .select('fecha_creacion, detalle_pedidos ( subtotal, productos ( categorias ( nombre ) ) )')
+        .in('estado_actual', ESTADOS_VALIDOS)
+        .gte('fecha_creacion', hace30Dias)
+        .order('fecha_creacion', { ascending: true }),
     ]);
 
     const sum = (arr) => arr?.reduce((a, p) => a + (p.total || 0), 0) || 0;
@@ -224,6 +277,7 @@ const Dashboard = () => {
       tkSem: tk(vSem, nSem), tkSemP: tk(vSemP, nSemP),
       tkMes: tk(vMes, nMes), tkMesP: tk(vMesP, nMesP),
       tendencia: calcTendencia(pedTend),
+      tendenciaCat: calcTendenciaCategorias(pedCatTend),
       productosHoy: calcRanking(pedMesDet, inicioHoy),
       productosMes: calcRanking(pedMesDet),
       distPagos, totalPagos: distPagos.efectivo + distPagos.tarjeta,
@@ -324,6 +378,39 @@ const Dashboard = () => {
               <Area type="monotone" dataKey="ventas" stroke="#B87333" strokeWidth={2} fill="url(#gradVentas)" dot={false} activeDot={{ r: 5, fill: '#B87333', strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* ── Sección 2b: Tendencia por categoría ─────────────── */}
+        <div className="admin-fade-in" style={styles.panel}>
+          <h3 style={styles.panelTitulo}>Ventas por categoría — últimos 30 días</h3>
+          {dt.tendenciaCat.categorias.length === 0 ? (
+            <p style={styles.vacio}>Sin datos de categorías para el período</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={dt.tendenciaCat.data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid stroke="#222" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="dia" stroke="#444" fontSize={11} tick={{ fill: '#666' }} tickLine={false} axisLine={false} interval={4} />
+                <YAxis stroke="#444" fontSize={11} tick={{ fill: '#666' }} tickLine={false} axisLine={false} tickFormatter={(v) => v > 0 ? `$${(v / 1000).toFixed(0)}k` : '0'} width={50} />
+                <Tooltip content={<TooltipCategorias />} />
+                <Legend
+                  wrapperStyle={{ paddingTop: '16px', fontSize: '12px', color: '#999' }}
+                  iconType="circle"
+                  iconSize={8}
+                />
+                {dt.tendenciaCat.categorias.map((cat, i) => (
+                  <Line
+                    key={cat}
+                    type="monotone"
+                    dataKey={cat}
+                    stroke={CAT_COLORS[i % CAT_COLORS.length]}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 5, strokeWidth: 0 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* ── Sección 3: 3 paneles ──────────────────────────── */}
