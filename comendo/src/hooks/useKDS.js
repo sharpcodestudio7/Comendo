@@ -127,10 +127,19 @@ const useKDS = () => {
     if (nuevoEstado === 'Preparando') updateData.fecha_preparando = ahora;
     if (nuevoEstado === 'Listo')      updateData.fecha_listo       = ahora;
 
-    const { error } = await supabase
+    let { error } = await supabase
       .from('pedidos')
       .update(updateData)
       .eq('id_pedido', pedidoId);
+
+    // Si las columnas de timestamp aún no existen en la DB, reintenta solo con estado
+    if (error && error.message?.includes('column')) {
+      const fallback = await supabase
+        .from('pedidos')
+        .update({ estado_actual: nuevoEstado })
+        .eq('id_pedido', pedidoId);
+      error = fallback.error;
+    }
 
     if (error) {
       console.error('Error al cambiar estado:', error.message);
